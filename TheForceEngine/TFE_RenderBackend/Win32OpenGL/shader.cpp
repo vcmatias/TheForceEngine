@@ -31,8 +31,92 @@ namespace ShaderGL
 	static std::string s_vertexFile, s_fragmentFile;
 }
 
+#ifdef __ANDROID__
+// GLSL (desktop 330) -> GLSL ES 3.20 adaptation done at load time.
+static std::string s_esVertSrc, s_esFragSrc;
+static int s_esClip = -1, s_esNoPersp = -1;
+static bool s_esForceNoClip = false;
+static void replaceAll(std::string& s, const char* from, const char* to)
+{
+	const size_t fl = strlen(from), tl = strlen(to);
+	for (size_t p = s.find(from); p != std::string::npos; p = s.find(from, p + tl)) { s.replace(p, fl, to); }
+}
+static const char* adaptToES(const char* src, bool vertex, std::string& out)
+{
+	if (s_esClip < 0)
+	{
+		s_esClip = SDL_GL_ExtensionSupported("GL_EXT_clip_cull_distance") ? 1 : 0;
+		s_esNoPersp = SDL_GL_ExtensionSupported("GL_NV_shader_noperspective_interpolation") ? 1 : 0;
+		TFE_System::logWrite(LOG_MSG, "Shader", "GLES: clip_cull_distance=%d noperspective=%d", s_esClip, s_esNoPersp);
+	}
+	out.clear();
+	for (const char* c = src; *c; c++) { out.push_back((unsigned char)*c < 128 ? *c : ' '); }
+	// Desktop redeclaration of gl_ClipDistance: keep it sized (needed for dynamic indexing)
+	// with an explicit precision, or drop it when clip distances are not used.
+	const bool useClip = s_esClip > 0 && !s_esForceNoClip;
+	for (size_t p = out.find("out float gl_ClipDistance"); p != std::string::npos; p = out.find("out float gl_ClipDistance", p + 1))
+	{
+		size_t e = out.find(';', p);
+		if (e == std::string::npos) { break; }
+		if (useClip) { out.replace(p, e - p + 1, "out highp float gl_ClipDistance[8];"); }
+		else { out.replace(p, e - p + 1, " "); }
+	}
+	if (vertex && !useClip && out.find("gl_ClipDistance") != std::string::npos)
+	{
+		replaceAll(out, "gl_ClipDistance", "tfe_ClipDist");
+		out.insert(0, "out float tfe_ClipDist[8];\n");
+	}
+	if (!s_esNoPersp)
+	{
+		replaceAll(out, "noperspective ", " ");
+	}
+	return out.c_str();
+}
+static std::string s_esHeader;
+static const char* esHeader()
+{
+	if (s_esHeader.empty())
+	{
+		s_esHeader = "#version 320 es\n";
+		if (s_esClip > 0) { s_esHeader += "#extension GL_EXT_clip_cull_distance : enable\n"; }
+		if (s_esNoPersp > 0) { s_esHeader += "#extension GL_NV_shader_noperspective_interpolation : enable\n"; }
+		s_esHeader += "precision highp float;\nprecision highp int;\nprecision highp sampler2D;\nprecision highp sampler2DArray;\n"
+			"precision highp samplerBuffer;\nprecision highp isamplerBuffer;\nprecision highp usamplerBuffer;\n"
+			"precision highp usampler2D;\nprecision highp isampler2D;\n"
+			// VR: portal clip planes are built from the head; each eye sits a few cm away from it, so the
+			// planes get a little slack to avoid thin black cracks along sector boundaries.
+			"#define VR_CLIP_SLACK 0.02\n";
+	}
+	return s_esHeader.c_str();
+}
+#endif
+
+#ifdef __ANDROID__
 bool Shader::create(const char* vertexShaderGLSL, const char* fragmentShaderGLSL, const char* defineString/* = nullptr*/, ShaderVersion version/* = SHADER_VER_COMPTABILE*/)
 {
+	// First try with hardware clip distances; if the program does not build, retry without them.
+	const std::string vs = vertexShaderGLSL, fs = fragmentShaderGLSL;
+	if (createES(vs.c_str(), fs.c_str(), defineString, version)) { return true; }
+	if (s_esClip > 0 && vs.find("gl_ClipDistance") != std::string::npos)
+	{
+		TFE_System::logWrite(LOG_WARNING, "Shader", "Retrying shader without clip distances.");
+		s_esForceNoClip = true;
+		const bool ok = createES(vs.c_str(), fs.c_str(), defineString, version);
+		s_esForceNoClip = false;
+		return ok;
+	}
+	return false;
+}
+
+bool Shader::createES(const char* vertexShaderGLSL, const char* fragmentShaderGLSL, const char* defineString, ShaderVersion version)
+#else
+bool Shader::create(const char* vertexShaderGLSL, const char* fragmentShaderGLSL, const char* defineString/* = nullptr*/, ShaderVersion version/* = SHADER_VER_COMPTABILE*/)
+#endif
+{
+#ifdef __ANDROID__
+	vertexShaderGLSL = adaptToES(vertexShaderGLSL, true, s_esVertSrc);
+	fragmentShaderGLSL = adaptToES(fragmentShaderGLSL, false, s_esFragSrc);
+#endif
 	// Create shaders
 	m_shaderVersion = version;
 
@@ -43,6 +127,9 @@ bool Shader::create(const char* vertexShaderGLSL, const char* fragmentShaderGLSL
 	} else {
 		version_string = ShaderGL::c_glslVersionString[m_shaderVersion];
 	}
+#ifdef __ANDROID__
+	version_string = esHeader();
+#endif
 
 	const GLchar *vertex_shader_with_version[3] = { version_string, defineString ? defineString : "", vertexShaderGLSL };
 	u32 vertHandle = glCreateShader(GL_VERTEX_SHADER);
@@ -53,8 +140,8 @@ bool Shader::create(const char* vertexShaderGLSL, const char* fragmentShaderGLSL
 	glGetShaderiv(vertHandle, GL_COMPILE_STATUS, &success);
 	if (!success)
 	{
-		GLchar infoLog[512];
-		glGetShaderInfoLog(vertHandle, 512, NULL, infoLog);
+		GLchar infoLog[4096];
+		glGetShaderInfoLog(vertHandle, 4096, NULL, infoLog);
 		TFE_System::logWrite(LOG_ERROR, "Shader", "Vertex shader compilation failed:\n%s", infoLog);
 		return false;
 	}
@@ -66,8 +153,8 @@ bool Shader::create(const char* vertexShaderGLSL, const char* fragmentShaderGLSL
 	glGetShaderiv(fragHandle, GL_COMPILE_STATUS, &success);
 	if (!success)
 	{
-		GLchar infoLog[512];
-		glGetShaderInfoLog(fragHandle, 512, NULL, infoLog);
+		GLchar infoLog[4096];
+		glGetShaderInfoLog(fragHandle, 4096, NULL, infoLog);
 		TFE_System::logWrite(LOG_ERROR, "Shader", "Fragment shader compilation failed:\n%s", infoLog);
 		return false;
 	}
@@ -86,8 +173,8 @@ bool Shader::create(const char* vertexShaderGLSL, const char* fragmentShaderGLSL
 	glGetProgramiv(m_gpuHandle, GL_LINK_STATUS, &success);
 	if (!success)
 	{
-		GLchar infoLog[512];
-		glGetProgramInfoLog(m_gpuHandle, 512, NULL, infoLog);
+		GLchar infoLog[4096];
+		glGetProgramInfoLog(m_gpuHandle, 4096, NULL, infoLog);
 		TFE_System::logWrite(LOG_ERROR, "Shader", "Shader program linking failed:\n%s", infoLog);
 		return false;
 	}

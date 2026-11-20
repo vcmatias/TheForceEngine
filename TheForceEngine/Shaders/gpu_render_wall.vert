@@ -124,7 +124,7 @@ void main()
 					// Scale when looking up by view[1][1] which is 1.0 when looking straight and tends toward 0.0 as looking up or down.
 					d /= CameraView[1].y;
 					// Clamp to the maximum top.
-					y0 = CameraPos.y - min(100, d);
+					y0 = CameraPos.y - min(100.0, d);
 				}
 				else
 				{
@@ -296,7 +296,11 @@ void main()
 	for (int i = 0; i < int(portalCount) && i < 8; i++)
 	{
 		vec4 plane = texelFetch(DrawListPlanes, int(portalOffset) + i);
+		#ifdef VR_CLIP_SLACK
+		gl_ClipDistance[i] = dot(vec4(vtx_pos.xyz, 1.0), plane) + VR_CLIP_SLACK;
+#else
 		gl_ClipDistance[i] = dot(vec4(vtx_pos.xyz, 1.0), plane);
+#endif
 	}
 	for (int i = int(portalCount); i < 8; i++)
 	{

@@ -1,3 +1,6 @@
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#endif
 #include <cstring>
 
 #include "inputMapping.h"
@@ -634,6 +637,12 @@ namespace TFE_Input
 		s32 mouseAbsX, mouseAbsY;
 		SDL_GetRelativeMouseState(&mouseX, &mouseY);
 		SDL_GetMouseState(&mouseAbsX, &mouseAbsY);
+#ifdef __ANDROID__
+		{
+			s32 cx, cy, cdx, cdy;
+			if (tfe_xr_get_cursor(&cx, &cy, &cdx, &cdy)) { mouseAbsX = cx; mouseAbsY = cy; mouseX = cdx; mouseY = cdy; }
+		}
+#endif
 
 		// Handle Playback
 		if (isDemoPlayback())

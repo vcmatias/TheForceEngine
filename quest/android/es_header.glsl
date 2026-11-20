@@ -1,0 +1,10 @@
+#version 320 es
+precision highp float;
+precision highp int;
+precision highp sampler2D;
+precision highp sampler2DArray;
+precision highp samplerBuffer;
+precision highp isamplerBuffer;
+precision highp usamplerBuffer;
+precision highp usampler2D;
+precision highp isampler2D;

@@ -9,9 +9,122 @@
 #include <TFE_Jedi/Renderer/jediRenderer.h>
 // TFE
 #include <TFE_Settings/settings.h>
+#include <TFE_System/system.h>
+
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#include <TFE_Jedi/Math/core_math.h>
+#include <TFE_Jedi/Level/rwall.h>
+#include <TFE_Jedi/Level/rsector.h>
+#include <math.h>
+#include <vector>
+#include <TFE_DarkForces/time.h>
+extern "C" float tfe_df_vr_wall_penetration(const float off[3], float margin);
+#endif
 
 namespace TFE_DarkForces
 {
+#ifdef __ANDROID__
+	// VR: while a fire block runs, the player object aims along the right controller
+	// and fires from the controller position. Restored when the block ends (no yields inside).
+	s32 weapon_vrCurrentId();
+	// Projectiles created inside a VR fire block: hidden until they pass the muzzle.
+	struct VrProjHide { bool active = false; f32 dist = 0.0f; };
+	static VrProjHide s_vrProjHide;
+	struct VrHiddenProj { SecObject* obj; vec3_fixed start; f32 dist; Tick until; };
+	static std::vector<VrHiddenProj> s_vrHidden;
+	void weapon_vrProjectileCreated(SecObject* proj, fixed16_16 x, fixed16_16 y, fixed16_16 z)
+	{
+		if (!s_vrProjHide.active || !proj || s_vrProjHide.dist <= 0.01f) { return; }
+		s_vrHidden.push_back({ proj, { x, y, z }, s_vrProjHide.dist, s_curTick + 60 });
+	}
+	struct VrAimScope
+	{
+		bool active = false;
+		s16 yaw = 0, pitch = 0;
+		vec3_fixed pos = {};
+		VrAimScope()
+		{
+			f32 dir[3], hand[3];
+			if (!s_playerObject || !tfe_xr_get_aim(dir, hand)) { return; }
+			active = true;
+			tfe_xr_on_fire(weapon_vrCurrentId());
+			yaw = s_playerObject->yaw;
+			pitch = s_playerObject->pitch;
+			pos = s_playerObject->posWS;
+
+			// Body frame (TFE view axes: x right, y down, z back) -> world.
+			f32 sn, cs;
+			TFE_Jedi::sinCosFlt(-f32(yaw), &sn, &cs);
+			const f32 v[3] = { dir[0], -dir[1], dir[2] };
+			const f32 d[3] = { cs*v[0] + sn*v[2], v[1], sn*v[0] - cs*v[2] };
+			const f32 toAngle = 16384.0f / (2.0f * 3.14159265f);
+			const f32 horiz = sqrtf(d[0]*d[0] + d[2]*d[2]);
+			s_playerObject->yaw = s16(s32(atan2f(d[0], d[2]) * toAngle) & 0x3fff);
+			s_playerObject->pitch = s16(atan2f(-d[1], horiz) * toAngle);
+
+			// Hand offset from the head origin, in world units (horizontal part clamped to stay near the body).
+			const f32 u = tfe_xr_units_per_meter();
+			const f32 h[3] = { hand[0]*u, -hand[1]*u, hand[2]*u };
+			f32 o[3] = { cs*h[0] + sn*h[2], h[1], sn*h[0] - cs*h[2] };
+			const f32 oh = sqrtf(o[0]*o[0] + o[2]*o[2]);
+			// The shot starts at the drawn muzzle (long barrels such as the E-11 reach well past the
+			// old 2.2 unit limit); it only stops short of a wall the muzzle would be inside.
+			f32 reach = fminf(oh, 4.0f);
+			const f32 pen = tfe_df_vr_wall_penetration(hand, 0.08f) * u;
+			if (pen > 0.0f) { reach = fmaxf(0.0f, reach - pen); }
+			if (oh > 0.001f && reach < oh) { o[0] *= reach / oh; o[2] *= reach / oh; }
+			{
+				// The bolt always starts back on the barrel line, at the point nearest the body (so anything
+				// between the player and the muzzle is hit, walls included), and stays hidden until it has
+				// passed the muzzle: it looks like it leaves the gun.
+				const f32 along = o[0]*d[0] + o[1]*d[1] + o[2]*d[2];   // muzzle distance along the aim from the body
+				const f32 back = fminf(fmaxf(along, 0.0f), 2.5f);
+				o[0] -= d[0] * back; o[1] -= d[1] * back; o[2] -= d[2] * back;
+				s_vrProjHide.active = true;
+				s_vrProjHide.dist = back;
+			}
+			s_playerObject->posWS.x += floatToFixed16(o[0]);
+			s_playerObject->posWS.y += floatToFixed16(o[1]);
+			s_playerObject->posWS.z += floatToFixed16(o[2]);
+			TFE_System::logWrite(LOG_MSG, "VRFire", "body %.2f %.2f %.2f eyeH %.2f yaw %d -> muzzle %.2f %.2f %.2f (hand ref %.3f %.3f %.3f) aim yaw %d pitch %d dir %.3f %.3f %.3f",
+				fixed16ToFloat(pos.x), fixed16ToFloat(pos.y), fixed16ToFloat(pos.z), fixed16ToFloat(s_playerObject->worldHeight), yaw,
+				fixed16ToFloat(s_playerObject->posWS.x), fixed16ToFloat(s_playerObject->posWS.y - s_playerObject->worldHeight), fixed16ToFloat(s_playerObject->posWS.z),
+				hand[0], hand[1], hand[2], s_playerObject->yaw, s_playerObject->pitch, dir[0], dir[1], dir[2]);
+		}
+		~VrAimScope()
+		{
+			s_vrProjHide.active = false;
+			if (!active) { return; }
+			s_playerObject->yaw = yaw;
+			s_playerObject->pitch = pitch;
+			s_playerObject->posWS = pos;
+		}
+	};
+#define VR_AIM_SCOPE VrAimScope vrAimScope__
+	// Renderer query: true while a VR bolt is still between its start point and the muzzle.
+	extern "C" int tfe_df_vr_projectile_hidden(const void* objPtr)
+	{
+		if (s_vrHidden.empty()) { return 0; }
+		int hidden = 0;
+		for (size_t i = 0; i < s_vrHidden.size();)
+		{
+			VrHiddenProj& h = s_vrHidden[i];
+			if (s_curTick > h.until) { s_vrHidden[i] = s_vrHidden.back(); s_vrHidden.pop_back(); continue; }
+			if (h.obj == objPtr)
+			{
+				const f32 dx = fixed16ToFloat(h.obj->posWS.x - h.start.x), dy = fixed16ToFloat(h.obj->posWS.y - h.start.y), dz = fixed16ToFloat(h.obj->posWS.z - h.start.z);
+				if (dx*dx + dy*dy + dz*dz < h.dist * h.dist) { hidden = 1; }
+				else { s_vrHidden[i] = s_vrHidden.back(); s_vrHidden.pop_back(); continue; }
+			}
+			i++;
+		}
+		return hidden;
+	}
+#else
+#define VR_AIM_SCOPE
+#endif
+
 	enum WeaponFireConst
 	{
 		MAX_AUTOAIM_DIST = COL_INFINITY,
@@ -227,6 +340,21 @@ namespace TFE_DarkForces
 			projOffsets->xOffset[i] = floatToFixed16(xOffsets[i]);
 			projOffsets->yOffset[i] = -floatToFixed16(yOffsets[i]);
 			projOffsets->zOffset[i] = floatToFixed16(zOffsets[i]);
+#ifdef __ANDROID__
+			if (tfe_xr_active())
+			{
+				// VR: projectiles spawn at the muzzle of the weapon in the hand (VrAimScope moves the
+				// origin there). Keep only a short step forward and a small spread between barrels.
+				// The first (main) projectile leaves exactly on the barrel axis; extra barrels keep a small spread.
+				projOffsets->xOffset[i] = (i == 0) ? 0 : floatToFixed16((xOffsets[i] - xOffsets[0]) * 0.2f);
+				projOffsets->yOffset[i] = 0;
+				projOffsets->zOffset[i] = floatToFixed16(0.45f);   // a small step past the muzzle (about 14 cm)
+				// No convergence angles: the 2D weapon was low on the screen and aimed up/in toward the
+				// reticle; in VR the shot follows the barrel.
+				projOffsets->pitchOffset[i] = 0;
+				if (i == 0) { projOffsets->yawOffset[i] = 0; }
+			}
+#endif
 		}
 	}
 	
@@ -362,7 +490,7 @@ namespace TFE_DarkForces
 			collision_effectObjectsInRangeXZ(s_playerObject->sector, s_curPlayerWeapon->wakeupRange, origin, actor_sendWakeupMsg, s_playerObject, ETFLAG_AI_ACTOR);
 		}
 
-		task_localBlockBegin;
+		task_localBlockBegin; VR_AIM_SCOPE;
 		// Aim and spawn projectiles
 		fixed16_16 mtx[9];
 		weapon_computeMatrix(mtx, -s_playerObject->pitch, -s_playerObject->yaw);
@@ -429,7 +557,7 @@ namespace TFE_DarkForces
 
 		if (*s_curPlayerWeapon->ammo)
 		{
-			task_localBlockBegin;
+			task_localBlockBegin; VR_AIM_SCOPE;
 			// Sound effect
 			if (s_pistolSndId)
 			{
@@ -562,6 +690,16 @@ namespace TFE_DarkForces
 					handleProjectileHit(projLogic, hitType);
 				}
 				tfe_restoreWeaponCollisionSpeed(projLogic);
+#ifdef __ANDROID__
+				if (tfe_xr_active())
+				{
+					SecObject* po = projLogic->logic.obj;
+					TFE_System::logWrite(LOG_MSG, "VRFire", "bolt at %.3f %.3f %.3f (muzzle %.3f %.3f) fire yaw %d pitch %d (aim yaw %d pitch %d)",
+						fixed16ToFloat(po->posWS.x), fixed16ToFloat(po->posWS.y), fixed16ToFloat(po->posWS.z),
+						fixed16ToFloat(s_playerObject->posWS.x), fixed16ToFloat(s_playerObject->posWS.z),
+						s_weaponFireYaw, s_weaponFirePitch, s_playerObject->yaw, s_playerObject->pitch);
+				}
+#endif
 			}
 			task_localBlockEnd;
 			
@@ -620,7 +758,7 @@ namespace TFE_DarkForces
 
 		if (*s_curPlayerWeapon->ammo)
 		{
-			task_localBlockBegin;
+			task_localBlockBegin; VR_AIM_SCOPE;
 			// Sound effect
 			if (s_rifleSndId)
 			{
@@ -753,6 +891,16 @@ namespace TFE_DarkForces
 					handleProjectileHit(projLogic, hitType);
 				}
 				tfe_restoreWeaponCollisionSpeed(projLogic);
+#ifdef __ANDROID__
+				if (tfe_xr_active())
+				{
+					SecObject* po = projLogic->logic.obj;
+					TFE_System::logWrite(LOG_MSG, "VRFire", "bolt at %.3f %.3f %.3f (muzzle %.3f %.3f) fire yaw %d pitch %d (aim yaw %d pitch %d)",
+						fixed16ToFloat(po->posWS.x), fixed16ToFloat(po->posWS.y), fixed16ToFloat(po->posWS.z),
+						fixed16ToFloat(s_playerObject->posWS.x), fixed16ToFloat(s_playerObject->posWS.z),
+						s_weaponFireYaw, s_weaponFirePitch, s_playerObject->yaw, s_playerObject->pitch);
+				}
+#endif
 			}
 			task_localBlockEnd;
 
@@ -842,6 +990,7 @@ namespace TFE_DarkForces
 
 			task_localBlockBegin;
 			task_callTaskFunc(weapon_handleState2);
+			VR_AIM_SCOPE;
 			fixed16_16 dt = intToFixed16(s_curTick - taskCtx->startTick);
 
 			// Wakeup AI within range
@@ -995,7 +1144,7 @@ namespace TFE_DarkForces
 					task_callTaskFunc(weapon_handleState);
 				} while (msg != MSG_RUN_TASK);
 
-				task_localBlockBegin;
+				task_localBlockBegin; VR_AIM_SCOPE;
 				// Aim projectiles
 				fixed16_16 mtx[9];
 				weapon_computeMatrix(mtx, -s_playerObject->pitch, -s_playerObject->yaw);
@@ -1149,7 +1298,7 @@ namespace TFE_DarkForces
 					task_callTaskFunc(weapon_handleState);
 				} while (msg != MSG_RUN_TASK);
 
-				task_localBlockBegin;
+				task_localBlockBegin; VR_AIM_SCOPE;
 				// Aim projectile
 				fixed16_16 mtx[9];
 				weapon_computeMatrix(mtx, -s_playerObject->pitch, -s_playerObject->yaw);
@@ -1334,7 +1483,7 @@ namespace TFE_DarkForces
 					collision_effectObjectsInRangeXZ(s_playerObject->sector, s_curPlayerWeapon->wakeupRange, origin, actor_sendWakeupMsg, s_playerObject, ETFLAG_AI_ACTOR);
 				}
 
-				task_localBlockBegin;
+				task_localBlockBegin; VR_AIM_SCOPE;
 				// Aim projectiles
 				fixed16_16 mtx[9];
 				weapon_computeMatrix(mtx, -s_playerObject->pitch, -s_playerObject->yaw);
@@ -1471,7 +1620,7 @@ namespace TFE_DarkForces
 					collision_effectObjectsInRangeXZ(s_playerObject->sector, s_curPlayerWeapon->wakeupRange, origin, actor_sendWakeupMsg, s_playerObject, ETFLAG_AI_ACTOR);
 				}
 
-				task_localBlockBegin;
+				task_localBlockBegin; VR_AIM_SCOPE;
 				// Aim projectiles
 				fixed16_16 mtx[9];
 				weapon_computeMatrix(mtx, -s_playerObject->pitch, -s_playerObject->yaw);
@@ -1649,7 +1798,7 @@ namespace TFE_DarkForces
 		if (*s_curPlayerWeapon->ammo)
 		{
 			// Sound effect
-			task_localBlockBegin;
+			task_localBlockBegin; VR_AIM_SCOPE;
 			if (s_mortarFireSndID)
 			{
 				sound_stop(s_mortarFireSndID);
@@ -1853,7 +2002,7 @@ namespace TFE_DarkForces
 			};
 			task_callTaskFunc(weapon_animateOnOrOffscreen);
 
-			task_localBlockBegin;
+			task_localBlockBegin; VR_AIM_SCOPE;
 			fixed16_16 floorHeight, ceilHeight;
 			sector_getObjFloorAndCeilHeight(s_playerObject->sector, s_playerObject->posWS.y, &floorHeight, &ceilHeight);
 
@@ -1914,7 +2063,7 @@ namespace TFE_DarkForces
 
 		if (*s_curPlayerWeapon->ammo)
 		{
-			task_localBlockBegin;
+			task_localBlockBegin; VR_AIM_SCOPE;
 			// Sound effect
 			if (s_concussionFireSndID)
 			{
@@ -2110,7 +2259,7 @@ namespace TFE_DarkForces
 					collision_effectObjectsInRangeXZ(s_playerObject->sector, s_curPlayerWeapon->wakeupRange, origin, actor_sendWakeupMsg, s_playerObject, ETFLAG_AI_ACTOR);
 				}
 
-				task_localBlockBegin;
+				task_localBlockBegin; VR_AIM_SCOPE;
 				// Aim projectile
 				fixed16_16 mtx[9];
 				weapon_computeMatrix(mtx, -s_playerObject->pitch, -s_playerObject->yaw);
@@ -2246,7 +2395,7 @@ namespace TFE_DarkForces
 					collision_effectObjectsInRangeXZ(s_playerObject->sector, s_curPlayerWeapon->wakeupRange, origin, actor_sendWakeupMsg, s_playerObject, ETFLAG_AI_ACTOR);
 				}
 
-				task_localBlockBegin;
+				task_localBlockBegin; VR_AIM_SCOPE;
 				// Aim projectiles
 				fixed16_16 mtx[9];
 				weapon_computeMatrix(mtx, -s_playerObject->pitch, -s_playerObject->yaw);
@@ -2398,6 +2547,10 @@ namespace TFE_DarkForces
 		{
 			return JFALSE;
 		}
+#ifdef __ANDROID__
+		// VR: the shot follows the barrel; auto-aim would bend it toward nearby enemies.
+		if (tfe_xr_active()) { return JFALSE; }
+#endif
 		fixed16_16 closest = MAX_AUTOAIM_DIST;
 		for (s32 i = 0; i < s_drawnObjCount; i++)
 		{

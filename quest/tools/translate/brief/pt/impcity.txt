@@ -1,0 +1,12 @@
+bar 5: MISSÃO XI
+bar 17: CIDADE IMPERIAL, CORUSCANT
+bar 29: A MÁSCARA IMPERIAL
+bar 71: CONTEXTO
+bar 328: MISSÃO
+bar 589: OBJETIVOS DA MISSÃO:
+p0: Fico devendo mais essa, Kyle.
+p1: Analisei o cartão nava que você roubou dos capangas de Jabba. O cartão é um dispositivo de navegação criptografado do exército imperial, que se conecta a uma caixa decodificadora para decifrar coordenadas nava para o computador nava. Esse cartão pode nos dizer para onde os contrabandistas estão levando as cargas. Infelizmente, o cartão nava é inútil sem uma chave para decodificá-lo. Essa chave fica na Cidade Imperial, no coração do Império. Nem preciso dizer que esta missão vai ser perigosa.
+p2: Madine, por meio dos seus contatos internos, conseguiu uma autorização de segurança que me permite entrar na cidade e deixar você lá. Seu alvo é o Prédio de Operações de Segurança Imperial, o centro das operações secretas e da inteligência do Império: uma área de segurança máxima, com todos os postos sempre em alerta. O decodificador fica num grande cofre subterrâneo no coração do prédio. Depois de invadir o computador central, você poderá inserir o cartão nava no decodificador e gravar as informações de navegação em fitas de dados. Então terá de sair do prédio com as fitas e voltar para a nave.
+p3: - Localizar o prédio de Operações de Segurança.
+p4: - Abrir o cofre principal. Inserir o cartão nava no decodificador e pegar as fitas de dados decodificadas.
+p5: - Me encontrar de volta na nave.

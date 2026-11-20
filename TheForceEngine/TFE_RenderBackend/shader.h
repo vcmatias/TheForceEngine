@@ -49,6 +49,9 @@ public:
 	Shader() : m_gpuHandle(0), m_clipPlaneCount(0), m_shaderVersion(SHADER_VER_COMPTABILE) {}
 
 	bool create(const char* vertexShaderCode, const char* fragmentShaderCode, const char* defineString = nullptr, ShaderVersion version = SHADER_VER_COMPTABILE);
+#ifdef __ANDROID__
+	bool createES(const char* vertexShaderCode, const char* fragmentShaderCode, const char* defineString, ShaderVersion version);
+#endif
 	bool load(const char* vertexShader, const char* fragmentShader, u32 defineCount = 0, ShaderDefine* defines = nullptr, ShaderVersion version = SHADER_VER_COMPTABILE);
 	void enableClipPlanes(s32 count);
 	void destroy();

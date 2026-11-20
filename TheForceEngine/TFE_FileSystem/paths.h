@@ -52,6 +52,9 @@ namespace TFE_Paths
 	void addLocalSearchPath(const char* localSearchPath);
 	void addAbsoluteSearchPath(const char* absoluteSearchPath);
 	void addAbsoluteSearchPathToHead(const char* absoluteSearchPath);
+	// Returns an archive to search before 'archive' (translated resources), or null.
+	typedef Archive* (*ArchivePatchProvider)(Archive* archive);
+	void setArchivePatchProvider(ArchivePatchProvider provider);
 	void addLocalArchive(Archive* archive);
 	void removeLastArchive();
 	void addLocalArchiveToFront(Archive* archive);

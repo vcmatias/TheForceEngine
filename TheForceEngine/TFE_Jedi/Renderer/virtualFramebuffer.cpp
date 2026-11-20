@@ -133,6 +133,41 @@ namespace TFE_Jedi
 		TFE_RenderBackend::setPalette(palette);
 	}
 
+#ifdef __ANDROID__
+	// VR: the mission tablet is composed on the CPU at 320x200 while the GPU renderer keeps drawing the
+	// world into the eyes. These swap the CPU target (and its scale and clip rects) for a private canvas.
+	static struct
+	{
+		u8* buf; u32 w, h; fixed16_16 xs, ys; s32 wide;
+		ScreenRect rect[VFB_RECT_COUNT], prev[VFB_RECT_COUNT];
+		bool pushed;
+	} s_vrSaved = {};
+	void vfb_vrPushCanvas320(u8* canvas)
+	{
+		if (s_vrSaved.pushed || !canvas) { return; }
+		s_vrSaved.buf = s_curFrameBuffer; s_vrSaved.w = s_width; s_vrSaved.h = s_height;
+		s_vrSaved.xs = s_xScale; s_vrSaved.ys = s_yScale; s_vrSaved.wide = s_widescreenOffset;
+		memcpy(s_vrSaved.rect, s_screenRect, sizeof(s_screenRect));
+		memcpy(s_vrSaved.prev, s_screenPrev, sizeof(s_screenPrev));
+		s_vrSaved.pushed = true;
+		s_curFrameBuffer = canvas; s_width = 320; s_height = 200;
+		s_xScale = ONE_16; s_yScale = ONE_16; s_widescreenOffset = 0;
+		s_screenRect[VFB_RECT_UI] = { 0, 0, 319, 199 };
+		s_screenRect[VFB_RECT_RENDER] = { 0, 1, 319, 198 };
+		s_screenPrev[VFB_RECT_UI] = s_screenRect[VFB_RECT_UI];
+		s_screenPrev[VFB_RECT_RENDER] = s_screenRect[VFB_RECT_RENDER];
+	}
+	void vfb_vrPopCanvas()
+	{
+		if (!s_vrSaved.pushed) { return; }
+		s_curFrameBuffer = s_vrSaved.buf; s_width = s_vrSaved.w; s_height = s_vrSaved.h;
+		s_xScale = s_vrSaved.xs; s_yScale = s_vrSaved.ys; s_widescreenOffset = s_vrSaved.wide;
+		memcpy(s_screenRect, s_vrSaved.rect, sizeof(s_screenRect));
+		memcpy(s_screenPrev, s_vrSaved.prev, sizeof(s_screenPrev));
+		s_vrSaved.pushed = false;
+	}
+#endif
+
 	void vfb_setMode(FramebufferMode mode)
 	{
 		s_nextMode = mode;

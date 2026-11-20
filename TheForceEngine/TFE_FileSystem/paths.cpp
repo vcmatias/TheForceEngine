@@ -29,6 +29,10 @@ namespace TFE_Paths
 
 	static std::string s_paths[PATH_COUNT];
 	static std::vector<Archive*> s_localArchives;
+	// Translation patches: a small archive with replaced resources that rides in front of the
+	// archive it patches (see setArchivePatchProvider).
+	static std::vector<bool> s_localIsPatch;
+	static ArchivePatchProvider s_patchProvider = nullptr;
 	static std::vector<std::string> s_searchPaths;
 	static std::vector<FileMapping> s_fileMappings;
 
@@ -263,9 +267,11 @@ namespace TFE_Paths
 		Archive** archive = s_localArchives.data();
 		for (size_t i = 0; i < count; i++)
 		{
+			if (i < s_localIsPatch.size() && s_localIsPatch[i]) { continue; }   // patches are owned by their provider
 			Archive::freeArchive(archive[i]);
 		}
 		s_localArchives.clear();
+		s_localIsPatch.clear();
 	}
 
 	// Add a single file that can be referenced by 'fileName' even though the real name may be different.
@@ -310,24 +316,59 @@ namespace TFE_Paths
 		addSearchPath(fullPath);
 	}
 		
+	void setArchivePatchProvider(ArchivePatchProvider provider)
+	{
+		s_patchProvider = provider;
+	}
+
 	void addLocalArchiveToFront(Archive* archive)
 	{
+		Archive* patch = (s_patchProvider && archive) ? s_patchProvider(archive) : nullptr;
 		s_localArchives.insert(s_localArchives.begin(), archive);
+		s_localIsPatch.insert(s_localIsPatch.begin(), false);
+		if (patch)
+		{
+			s_localArchives.insert(s_localArchives.begin(), patch);
+			s_localIsPatch.insert(s_localIsPatch.begin(), true);
+		}
 	}
 
 	void removeFirstArchive()
 	{
+		if (s_localArchives.empty()) { return; }
+		const bool patch = s_localIsPatch.front();
 		s_localArchives.erase(s_localArchives.begin());
+		s_localIsPatch.erase(s_localIsPatch.begin());
+		if (patch && !s_localArchives.empty())
+		{
+			// the patched archive itself
+			s_localArchives.erase(s_localArchives.begin());
+			s_localIsPatch.erase(s_localIsPatch.begin());
+		}
 	}
 
 	void addLocalArchive(Archive* archive)
 	{
+		Archive* patch = (s_patchProvider && archive) ? s_patchProvider(archive) : nullptr;
+		if (patch)
+		{
+			s_localArchives.push_back(patch);
+			s_localIsPatch.push_back(true);
+		}
 		s_localArchives.push_back(archive);
+		s_localIsPatch.push_back(false);
 	}
 
 	void removeLastArchive()
 	{
+		if (s_localArchives.empty()) { return; }
 		s_localArchives.pop_back();
+		s_localIsPatch.pop_back();
+		if (!s_localIsPatch.empty() && s_localIsPatch.back())
+		{
+			s_localArchives.pop_back();
+			s_localIsPatch.pop_back();
+		}
 	}
 
 	bool getFilePath(const char* fileName, FilePath* outPath)

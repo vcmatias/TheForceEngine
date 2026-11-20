@@ -115,6 +115,8 @@ namespace TFE_Sprite_Jedi
 	const std::vector<JediWax*>& getWaxList(AssetPool pool = POOL_LEVEL);
 	const std::vector<JediFrame*>& getFrameList(AssetPool pool = POOL_LEVEL);
 
+	const char* getWaxName(const JediWax* wax);
+	const char* getFrameName(const JediFrame* frame);
 	bool getWaxIndex(JediWax* wax, s32* index, AssetPool* pool);
 	JediWax* getWaxByIndex(s32 index, AssetPool pool);
 

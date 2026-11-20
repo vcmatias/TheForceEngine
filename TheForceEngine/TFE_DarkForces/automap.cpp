@@ -16,6 +16,9 @@
 
 using namespace TFE_Jedi;
 
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#endif
 namespace TFE_DarkForces
 {
 	enum MapWallColor
@@ -62,6 +65,25 @@ namespace TFE_DarkForces
 	};
 
 	static fixed16_16 s_screenScale = 0xc000;	// 0.75
+#ifdef __ANDROID__
+	// VR: the map is shown on the small wrist computer screen, start closer in.
+	void automap_vrZoom()
+	{
+		if (s_screenScale < FIXED(4)) { s_screenScale = FIXED(4); }
+	}
+	// VR map button pressed again with the map open: one step out (shows more of the map).
+	extern "C" void tfe_df_vr_map_zoom_out(void)
+	{
+		s_screenScale = max(0x666, mul16(s_screenScale, 0x9999));   // x0.6
+		automap_computeScreenBounds();
+	}
+	// VR zoom button after the widest step: back to the close view the map opens with.
+	extern "C" void tfe_df_vr_map_zoom_reset(void)
+	{
+		s_screenScale = FIXED(4);
+		automap_computeScreenBounds();
+	}
+#endif
 	static fixed16_16 s_scrLeftScaled;
 	static fixed16_16 s_scrRightScaled;
 	static fixed16_16 s_scrTopScaled;
@@ -173,6 +195,10 @@ namespace TFE_DarkForces
 			fixed16_16 scaleFactor = div16(intToFixed16(height), FIXED(200));
 			s_screenScale = mul16(s_screenScale, scaleFactor);
 		}
+#ifdef __ANDROID__
+		// VR: the map is read on a ~6 cm wrist screen, start 2.5x closer.
+		if (tfe_xr_active()) { s_screenScale = mul16(s_screenScale, floatToFixed16(1.6f)); }
+#endif
 	}
 
 	void automap_updateDeltaCoords(s32 x, s32 z)
@@ -492,6 +518,17 @@ namespace TFE_DarkForces
 	void automap_drawLine(fixed16_16 x0, fixed16_16 z0, fixed16_16 x1, fixed16_16 z1, u8 color)
 	{
 		ScreenRect* screenRect = vfb_getScreenRect(VFB_RECT_RENDER);
+#ifdef __ANDROID__
+		// VR: keep the map out of the bottom band where the HUD pieces live (they are shown on the
+		// watch and on the weapon, which must not pick up map lines).
+		if (tfe_xr_active() && !s_pdaActive)
+		{
+			ScreenRect r = *screenRect;
+			r.bot = r.top + (r.bot - r.top) * 78 / 100;
+			screen_drawLine(&r, x0, z0, x1, z1, color, s_mapFramebuffer);
+			return;
+		}
+#endif
 		screen_drawLine(screenRect, x0, z0, x1, z1, color, s_mapFramebuffer);
 	}
 
@@ -723,7 +760,12 @@ namespace TFE_DarkForces
 		if (sector->layer == layer)
 		{
 			fixed16_16 sinYaw, cosYaw;
-			sinCosFixed(player->yaw, &sinYaw, &cosYaw);
+			angle14_32 yaw = player->yaw;
+#ifdef __ANDROID__
+			// VR: the arrow follows where the player really faces (stick turn plus real body/head turn).
+			if (tfe_xr_active()) { yaw = (yaw + tfe_xr_head_yaw_units()) & ANGLE_MASK; }
+#endif
+			sinCosFixed(yaw, &sinYaw, &cosYaw);
 
 			fixed16_16 x1 = x0 + mul16(sinYaw, FIXED(4));
 			fixed16_16 z1 = z0 + mul16(cosYaw, FIXED(4));

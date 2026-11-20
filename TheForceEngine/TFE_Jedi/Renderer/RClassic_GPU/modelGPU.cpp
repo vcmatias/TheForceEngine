@@ -28,6 +28,9 @@
 #include "../rcommon.h"
 
 #include <algorithm>
+#ifdef __ANDROID__
+#include <tfe_vox.h>
+#endif
 #include <map>
 #include <vector>
 
@@ -624,6 +627,43 @@ namespace TFE_Jedi
 		s_indexData.push_back(outIndices[3] + vertexStart);
 	}
 
+#ifdef __ANDROID__
+	// Voxel models: one quad per polygon with its own unit normal, no vertex sharing (the vertex
+	// search of the 3DO path is far too slow for thousands of small faces).
+	static void addVoxelModel(JediModel* model, s32* indexStart, s32* vertexStart)
+	{
+		ModelGPU* mgpu = newModelGPU();
+		if (!mgpu) { return; }
+		mgpu->indexStart = (s32)s_indexData.size();
+		mgpu->shader = MGPU_SHADER_SOLID;
+		for (s32 p = 0; p < model->polygonCount; p++)
+		{
+			const JmPolygon* poly = &model->polygons[p];
+			if (poly->vertexCount != 4) { continue; }
+			const u32 base = (u32)s_vertexData.size();
+			const vec3& n = model->polygonNormals[p];
+			const Vec3f nrm = { fixed16ToFloat(n.x), fixed16ToFloat(n.y), fixed16ToFloat(n.z) };
+			for (s32 k = 0; k < 4; k++)
+			{
+				const vec3& v = model->vertices[poly->indices[k]];
+				ModelVertex out;
+				out.pos = { fixed16ToFloat(v.x), fixed16ToFloat(v.y), fixed16ToFloat(v.z) };
+				out.nrm = nrm;
+				out.uv = { 0.0f, 0.0f };
+				u8* c = (u8*)&out.color;
+				c[0] = (u8)poly->color; c[1] = 0xff; c[2] = 0xff; c[3] = 0x00;
+				s_vertexData.push_back(out);
+			}
+			s_indexData.push_back(base + 0); s_indexData.push_back(base + 1); s_indexData.push_back(base + 2);
+			s_indexData.push_back(base + 0); s_indexData.push_back(base + 2); s_indexData.push_back(base + 3);
+		}
+		mgpu->polyCount = ((s32)s_indexData.size() - mgpu->indexStart) / 3;
+		model->drawId = (void*)mgpu;
+		*indexStart = (s32)s_indexData.size();
+		*vertexStart = (s32)s_vertexData.size();
+	}
+#endif
+
 	void model_loadGpuModels()
 	{
 		ModelBuildCtx ctx;
@@ -731,6 +771,13 @@ namespace TFE_Jedi
 			}
 		}
 
+#ifdef __ANDROID__
+		for (JediModel* vm : vox_models())
+		{
+			if (vm->drawId) { free(vm->drawId); vm->drawId = nullptr; }
+			addVoxelModel(vm, &indexStart, &vertexStart);
+		}
+#endif
 		s_modelVertexBuffer.create((u32)s_vertexData.size(), sizeof(ModelVertex), c_modelAttrCount, c_modelAttrMapping, false, s_vertexData.data());
 		s_modelIndexBuffer.create((u32)s_indexData.size(), sizeof(u32), false, s_indexData.data());
 	}

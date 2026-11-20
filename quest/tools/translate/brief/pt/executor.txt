@@ -1,0 +1,10 @@
+bar 4: MISSÃO XIII
+bar 28: O CLANDESTINO
+bar 48: CONTEXTO
+bar 139: MISSÃO
+bar 304: OBJETIVOS DA MISSÃO:
+p0: Agora que você está por conta própria, não vou estar lá para tirar você de encrencas. Programei o seu PDA com as informações da missão, que vão ajudar nas suas tarefas.
+p1: Uma vez no Executor, espere o momento certo para atacar. O Executor vai se encontrar com o Arc Hammer e começar a transferir a carga. Entre num dos contêineres de carga e viaje dentro dele até o Arc Hammer. O mais provável é que eles interrompam a operação quando descobrirem que você está a bordo, então você vai precisar reiniciá-la. É aí que começa a sua próxima missão.
+p2: - Chegar ao hangar dos ônibus de carga.
+p3: - Ativar o sistema dos ônibus de carga.
+p4: - Entrar na nave de carga e viajar até o Arc Hammer.

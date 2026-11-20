@@ -56,6 +56,10 @@ namespace TFE_Jedi
 	////////////////////////////
 	// Frame rendering is done, copy the results to GPU memory.
 	void vfb_swap();
+#ifdef __ANDROID__
+	void vfb_vrPushCanvas320(u8* canvas);
+	void vfb_vrPopCanvas();
+#endif
 	void vfb_forceToBlack();
 
 	void vfb_bindRenderTarget(bool clearColor = false);

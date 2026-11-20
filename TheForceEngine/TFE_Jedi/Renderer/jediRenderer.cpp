@@ -1,4 +1,7 @@
 #include "jediRenderer.h"
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#endif
 #include <TFE_Jedi/Math/fixedPoint.h>
 #include <TFE_Jedi/Level/robject.h>
 #include <TFE_Jedi/Level/level.h>
@@ -480,7 +483,13 @@ namespace TFE_Jedi
 		}
 		if (s_subRenderer == TSR_CLASSIC_GPU)
 		{
+#ifdef __ANDROID__
+			// VR: the world is drawn into the eyes, so nothing else overwrites the 2D screen:
+			// clear it every frame (the automap lines would accumulate otherwise).
+			vfb_bindRenderTarget(/*clearColor*/s_showWireframe || tfe_xr_active());
+#else
 			vfb_bindRenderTarget(/*clearColor*/s_showWireframe);
+#endif
 
 			u32 width, height;
 			vfb_getResolution(&width, &height);

@@ -8,6 +8,7 @@
 #include "player.h"
 #include "weapon.h"
 #include <TFE_FileSystem/paths.h>
+#include <TFE_FileSystem/fileutil.h>
 #include <TFE_System/system.h>
 #include <TFE_Settings/settings.h>
 #include <TFE_FrontEndUI/console.h>
@@ -26,6 +27,9 @@
 #include <TFE_Asset/imageAsset.h>
 #endif
 
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#endif
 namespace TFE_DarkForces
 {
 	///////////////////////////////////////////
@@ -314,13 +318,33 @@ namespace TFE_DarkForces
 		return true;
 	}
 		
+#ifdef __ANDROID__
+	// Portuguese files (Translation/pt next to the program data) replace the game's own when the
+	// caption language is "pt" (the language switch of the whole translation).
+	bool hud_translatedFile(const char* name, FilePath* fp)
+	{
+		if (TFE_Settings::getA11ySettings()->language != "pt") { return false; }
+		char path[TFE_MAX_PATH];
+		snprintf(path, TFE_MAX_PATH, "%sTranslation/pt/%s", TFE_Paths::getPath(PATH_PROGRAM), name);
+		if (!FileUtil::exists(path)) { return false; }
+		fp->archive = nullptr;
+		fp->index = 0xffffffff;   // INVALID_FILE: a plain file
+		strcpy(fp->path, path);
+		return true;
+	}
+#endif
+
 	void hud_loadGameMessages()
 	{
 		s_hudMessages.count = 0;
 		s_hudMessages.msgList = nullptr;
 
 		FilePath filePath;
+#ifdef __ANDROID__
+		if (hud_translatedFile("TEXT.MSG", &filePath) || TFE_Paths::getFilePath("text.msg", &filePath))
+#else
 		if (TFE_Paths::getFilePath("text.msg", &filePath))
+#endif
 		{
 			parseMessageFile(&s_hudMessages, &filePath, 1);
 		}
@@ -330,7 +354,11 @@ namespace TFE_DarkForces
 		const bool enableHdHud = TFE_Settings::getEnhancementsSettings()->enableHdHud && TFE_Settings::getGraphicsSettings()->colorMode == COLORMODE_TRUE_COLOR &&
 			TFE_Settings::getGraphicsSettings()->rendererIndex == RENDERER_HARDWARE;
 
+#ifdef __ANDROID__
+		if (hud_translatedFile("GLOWING.FNT", &filePath) || TFE_Paths::getFilePath(c_fontName[HudFont_Main], &filePath))
+#else
 		if (TFE_Paths::getFilePath(c_fontName[HudFont_Main], &filePath))
+#endif
 		{
 			s_fontList[HudFont_Main] = font_load(&filePath);
 		}
@@ -576,7 +604,7 @@ namespace TFE_DarkForces
 
 		fixed16_16 x = x0;
 		fixed16_16 y = y0;
-		for (char c = *str; c != 0; )
+		for (u8 c = (u8)*str; c != 0; )
 		{
 			if (c == '\n')
 			{
@@ -600,7 +628,7 @@ namespace TFE_DarkForces
 				}
 			}
 			str++;
-			c = *str;
+			c = (u8)*str;
 		}
 	}
 
@@ -658,6 +686,24 @@ namespace TFE_DarkForces
 
 		screenGPU_blitTextureScaled(s_hudStatusR, nullptr, x0, y0, hudScaleX/s_hudScaleFactors[HudScale_StatusR], hudScaleY/s_hudScaleFactors[HudScale_StatusR], 255);
 		screenGPU_blitTextureScaled(s_hudStatusL, nullptr, x1, y1, hudScaleX/s_hudScaleFactors[HudScale_StatusL], hudScaleY/s_hudScaleFactors[HudScale_StatusL], 255);
+#ifdef __ANDROID__
+		{
+			// VR: tell the XR layer where the two HUD pieces are (normalized, y from the bottom).
+			const f32 dw = f32(dispWidth), dh = f32(dispHeight);
+			const f32 sxR = fixed16ToFloat(hudScaleX / s_hudScaleFactors[HudScale_StatusR]), syR = fixed16ToFloat(hudScaleY / s_hudScaleFactors[HudScale_StatusR]);
+			const f32 sxL = fixed16ToFloat(hudScaleX / s_hudScaleFactors[HudScale_StatusL]), syL = fixed16ToFloat(hudScaleY / s_hudScaleFactors[HudScale_StatusL]);
+			// Screen draw coordinates are top-down; the XR layer samples GL textures (bottom-up).
+			const f32 hL = f32(s_hudStatusL->height) * syL / dh, hR = f32(s_hudStatusR->height) * syR / dh;
+			const f32 l[4] = { fixed16ToFloat(x1) / dw, 1.0f - fixed16ToFloat(y1) / dh - hL, f32(s_hudStatusL->width) * sxL / dw, hL };
+			const f32 r[4] = { fixed16ToFloat(x0) / dw, 1.0f - fixed16ToFloat(y0) / dh - hR, f32(s_hudStatusR->width) * sxR / dw, hR };
+			tfe_xr_set_hud_rects(l, r);
+			static s32 s_hudLog = 0;
+			if ((s_hudLog++ % 300) == 0)
+			{
+				TFE_System::logWrite(LOG_MSG, "VR", "hud rects L %.3f %.3f %.3f %.3f R %.3f %.3f %.3f %.3f disp %dx%d", l[0], l[1], l[2], l[3], r[0], r[1], r[2], r[3], dispWidth, dispHeight);
+			}
+		}
+#endif
 		if ((hudSettings->hudPos == TFE_HUDPOS_4_3 || hudSettings->pixelOffset[0] > 0 || hudSettings->pixelOffset[1] > 0) && 
 			s_hudCapLeft && s_hudCapRight)
 		{
@@ -1342,7 +1388,7 @@ namespace TFE_DarkForces
 
 		s32 x = x0;
 		s32 y = y0;
-		for (char c = *str; c != 0; )
+		for (u8 c = (u8)*str; c != 0; )
 		{
 			if (c == '\n')
 			{

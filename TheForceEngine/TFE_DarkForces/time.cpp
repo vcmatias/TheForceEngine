@@ -7,6 +7,9 @@
 
 using namespace TFE_Jedi;
 
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#endif
 namespace TFE_DarkForces
 {
 	Tick s_curTick = 0;
@@ -56,7 +59,11 @@ namespace TFE_DarkForces
 	{		
 		if (!s_pauseTimeUpdate)
 		{
+#ifdef __ANDROID__
+			s_timeAccum += TFE_System::getDeltaTime() * TIMER_FREQ * tfe_xr_time_scale();   // test scripts can slow time down
+#else
 			s_timeAccum += TFE_System::getDeltaTime() * TIMER_FREQ;
+#endif
 		}
 
 		Tick prevTick = s_curTick;

@@ -1,0 +1,201 @@
+example_cutscene "Esta é uma legenda de exemplo de cutscene."
+
+//INIMIGOS
+ranofc02.voc "Oficial: Pare onde está!"
+ranofc04.voc "Oficial: Você não tem autorização para esta área."
+ranofc05.voc "Oficial: Você está violando a lei imperial!"
+ranofc06.voc "Oficial: Alto!"
+ransto01.voc "Soldado: Ali está ele, detenham-no!"
+ransto02.voc "Soldado: Você aí, pare onde está."
+ransto03.voc "Soldado: Pare, escória rebelde!"
+ransto04.voc "Soldado: Você não tem autorização para esta área."
+ransto05.voc "Soldado: Renda-se imediatamente!"
+ransto06.voc "Soldado: Alto!"
+ransto07.voc "Soldado: Blasters na potência máxima!"
+ransto08.voc "Soldado: Acabem com ele!"
+icmdo-1.voc  "Comando: Ele está aqui! Detenham aquele homem!" //não usado?
+ioffic-1.voc "Oficial: Alto! Fique exatamente aí."
+m16moc01.voc "General Mohc: Faz muito tempo que não desafio um homem para a batalha. Fico feliz que meu oponente seja tão digno."
+
+
+//EFEITOS SONOROS
+door.voc    "[Porta sibila]"
+door-04.voc "[Porta range]"
+door1-1.voc "[Porta sibila]"
+//door1-2.voc "[Mecanismo da porta zumbindo]" //frequente demais
+//door1-3.voc "[Porta bate]"
+door2-1.voc "[Porta range]"
+//door2-2.voc "[Mecanismo da porta zumbindo]" //frequente demais
+//door2-3.voc "[Porta bate]"
+door3-1.voc "[Porta range]"
+//door3-2.voc "[Mecanismo da porta zumbindo]" //frequente demais
+//door3-3.voc "[Porta bate]"
+boba-1.voc   "[Fett ri]"                              //provocação do Boba Fett
+//boba-3.voc "[Fett grita]"                           //dor do Boba Fett (quase inaudível)
+boba-4.voc   "[Fett berra]"                           //morte do Boba Fett
+gamor-1.voc  "[Guincho suíno]"                        //morte do gamorreano
+gamor-3.voc  "[Grunhidos suínos]"                     //alerta do gamorreano
+reeyee1.voc  "[Alienígena gritando]"                  //alerta do gran
+reeyee-1.voc "[Alienígena gritando]"                  //alerta do gran (duplicado)
+reeyee3.voc  "[Grito de morte alienígena]"            //morte do gran
+reeyee-3.voc "[Grito de morte alienígena]"            //morte do gran (duplicado)
+probe-1.voc  "[Fala entrecortada de droide]"          //alerta da sonda
+probalm.voc  "[Circuitos sobrecarregando]"            //morte da sonda
+bossk-1.voc  "[Sibilo reptiliano]"                    //alerta do trandoshano
+bosskdie.voc "[Sibilo-grito reptiliano]"              //morte do trandoshano
+kell-1.voc   "[Dragão kell rugindo]"                  //dragão kell
+kell-2.voc   "[Rosnado agressivo]"                    //dragão kell
+kell-7.voc   "[Dragão kell guinchando]"               //morte do dragão kell
+intalert.voc "[Repulsor de droide trinando]"          //alerta do droide interrogador
+weld-die.voc "[Soldador range e para]"                //morte do soldador
+st-die-1.voc "[Grito de morte]"                       //morte de soldado/oficial
+phase1a.voc  "[Zumbido eletrônico ameaçador]"         //alerta da Fase 1
+phase1c.voc  "[Estertor mecânico]"                    //morte da Fase 1
+phase2c.voc  "[Grito sintetizado, metal desabando]"   //morte da Fase 3
+phase3a.voc  "[Metal retinindo, Mohc ri]"             //provocação da Fase 3
+phase3c.voc  "[Mohc grita]"                           //morte da Fase 3
+ex-lrg1.voc  "[Explosão]"
+ex-med1.voc  "[Grande explosão]"
+ex-tiny.voc  "[Estouro]"
+swim-in.voc  "[Mergulho na água]"
+beep-10.voc  "[MINA APITANDO]"
+fall.voc     "[Kyle grita]"
+choke.voc    "[Kyle arfa e geme]" 5
+landing1.voc "[Propulsores disparando]"
+locked-1.voc "[Trancada]"
+ex-small.voc "[Explosão]"
+creatur1.voc "[Ronco ameaçador, água agitando]"
+
+//----- FALAS DAS MISSÕES --------------------------------------
+//M01 (Base Secreta)
+m01kyl01.voc "Kyle: Fácil demais. Agora é chegar à minha nave."
+//M02 (Talay)
+m02kyl01.voc "Kyle: Jan?"
+m02jan01.voc "Jan: Pode falar, Kyle."
+m02kyl02.voc "Kyle: Parece que achei algo que pode nos ajudar."
+m02jan02.voc "Jan: Volte à plataforma de pouso que eu te encontro lá."
+//M03 (Anoat)
+m03kyl01.voc "Kyle: Jan, encontrei o Moff Rebus. Estou pronto para sair desta confusão."
+m03jan01.voc "Jan: Você manda, Kyle."
+//M04 (Instalação de Pesquisa)
+m04kyl01.voc "Kyle: Achei um metal com aparência interessante. Acho que pode dar pistas importantes."
+m04jan01.voc "Jan: É tudo de que precisamos. Vamos sair daqui, estou ficando nervosa."
+//M05 (Gromas)
+m05kyl01.voc "Kyle: Kyle para Jan, carga instalada. Pronto para sair."
+m05kyl02.voc "Kyle: Jan, é melhor você me tirar daqui. Acho que acabei de destruir um Dark Trooper. Não quero descobrir se há outros por perto."
+m05jan01.voc "Jan: Certo, Kyle, por mim está ótimo."
+m05kyl03.voc "Kyle: Se aquela coisa lá embaixo dá alguma ideia do que estamos enfrentando, vamos precisar de mais poder de fogo."
+//M06 (Centro de Detenção)
+m06kyl01.voc "Kyle: Certo, Jan, resgatei o Madine."
+m06jan01.voc "Jan: Não fique por aí, vamos sair antes que cheguem mais soldados."
+//M07 (Ramsees Hed)
+m07kyl01.voc "Kyle: O rastreador está instalado."
+m07jan01.voc "Jan: Captando o sinal. Parece que terminamos aqui."
+m07jan02.voc "Jan: Certo, Kyle, vamos ver para onde esses contrabandistas vão."
+//M08 (Instalação de Robótica)
+m08kyl01.voc "Kyle: Carga 1 instalada."
+m08kyl02.voc "Kyle: Carga 2 instalada."
+m08kyl03.voc "Kyle: Todas as cargas instaladas."
+mo8jan01.voc "Jan: Bom trabalho. Vamos explodir este cubo de gelo." //repare no erro do nome do arquivo, o no lugar de 0
+m08kyl04.voc "Kyle: Mulher do jeito que eu gosto."
+m08kyl05.voc "Kyle: Ah, dro- [estática]" //não usado?
+//M09 (Nar Shaddaa)
+m09kyl01.voc "Kyle: Jan! Encontrei aquele cartão nava imperial."
+m09jan01.voc "Jan: Devem ser as rotas dos contrabandistas até o Arc Hammer. Acho que está na hora de sair daí."
+m09jana1.voc "Jan: Devem ser as rotas dos contrabandistas até o Arc Hammer. Acho que está na hora de sair daí." //tomada alternativa
+//M10 (Nave de Jabba)
+m10jan01.voc "Jan: Obrigada, achei que estava perdida."
+m10kyl03.voc "Kyle: Sem tempo para abraços. Vamos sair daqui."
+//M11 (Cidade Imperial)
+m11kyl01.voc "Kyle: Jan, abri a tranca central. Estou dentro."
+m11jan01.voc "Jan: Bom trabalho, Kyle, mas ainda não acabou."
+m11kyl02.voc "Kyle: Cartão nava inserido, decodificando."
+m11jan02.voc "Jan: Lindo, Kyle. Agora pegue aquela fita de dados e leve esse seu couro de mercenário de volta à plataforma de pouso. Não posso ficar aqui fora muito tempo sem que a segurança imperial perceba." 8
+m11kyl03.voc "Kyle: Fitas de dados na mão, estou saindo."
+m11jan03.voc "Jan: Kyle, tem algo estranho acontecendo aqui. Volte já, é sério!"
+m11jan04.voc "Jan: Ah, não! Kyle, é melhor tomar cuidado, acabei de ver... [estática alta]"
+m11jan05.voc "Jan: Kyle, onde você está? Voltei à plataforma de pouso."
+m11kyl04.voc "Kyle: Onde você estava, Jan?"
+m11jan06.voc "Jan: Tinha caças TIE em cima de mim. Precisei me livrar deles direitinho."
+m11jana6.voc "Jan: Tinha caças TIE em cima de mim. Precisei me livrar deles direitinho." //tomada alternativa
+//M12 (Estação de Combustível)
+m12imp01.voc "Oficial: Nave contrabandista, sua rota está livre. Inicie o procedimento de acoplagem." 4.5
+m12kyl01.voc "Kyle: Certo, Jan, nave contrabandista sob controle."
+m12jan01.voc "Jan: Bom trabalho, Kyle."
+m12kyl02.voc "Kyle: Decolando agora... Te vejo no lado sombrio, Jan."
+m12jan02.voc "Jan: Boa sorte, Kyle... e que a Força esteja com você."
+//M13 (Executor)
+m13kyl01.voc "Kyle: Lá vamos nós..."
+//M16 (Arc Hammer) Sim, é essa a numeração
+m16kyl01.voc "Kyle: Esse é um..."
+m16kyl02.voc "Kyle: Esse é dois..."
+m16kyl03.voc "Kyle: Falta mais um."
+m16kyl04.voc "Kyle: A Jan ficaria orgulhosa..."
+m16kyl05.voc "Kyle: Não há glória na guerra, Mohc..."
+m16kyl06.voc "Kyle: Pela liberdade."
+
+//----- CUTSCENES -----------------------------------------------
+//Antes da M02 (Talay)
+m01nar01 "Kyle entrega os planos à Aliança Rebelde. Pouco depois, a Estrela da Morte é destruída. Mas, enquanto a Aliança comemora a vitória, outro plano sinistro é posto em marcha, e ele se tornará uma ameaça ainda maior para a Rebelião." 13.5
+m01vdr01 "O Imperador aprovou a sua demonstração de teste, General Mohc." 4
+m01moc0a "Obrigado, Lorde Vader. O que vou revelar hoje marcará uma nova era para o Império." 5.1
+m01moc01 "Obrigado, Lorde Vader. O que vou revelar hoje marcará uma nova era para o Império." 5.1 //duplicado
+m01moc0b "Poderemos dizimar os Rebeldes assim como fizemos com os Cavaleiros Jedi. Enfim, a guerra do Imperador será feita apenas da glória e da beleza da vitória decisiva." 11
+m01vdr02 "Uma causa nobre, General. Espero que a demonstração esteja à altura do que promete. Prossiga." 6
+m01moc02 "Com prazer."
+m01moc03 "Dark Trooper: liberar."
+intcom3  "[Conversa indistinta no alto-falante]"
+intcom4  "[Conversa indistinta no alto-falante]"
+intcom5  "[Conversa indistinta no alto-falante]"
+intcom6  "[Conversa indistinta no alto-falante]"
+beep-3   "[Bipe alto]"
+dt-door2 "[Ruídos mecânicos]"
+dt-lower "[Equipamento zumbindo]"
+dtlaunch "[Explosão de motor]"
+dive1    "[Motores uivando]"
+m01vdr03 "Muito impressionante, General. O Imperador ficará muito satisfeito. Continue o seu projeto."
+m01moc04 "Certamente, Lorde Vader."
+m01mma01 "Obrigada, comandante, por atender tão depressa. O Império não nos dá trégua desde a destruição da Estrela da Morte."
+m01mma02 "Há cinco dias o Império atacou uma de nossas bases secretas na cidade de Talay."
+m01mma03 "A Base Tak foi destruída em minutos. Muitos inocentes da cidade ao redor, além do pessoal rebelde, foram mortos. A Inteligência acredita que pode ser uma retaliação pela destruição da Estrela da Morte." 12.5
+m01reb01 "Aqui é a Base Tak chamando quem estiver na escuta. Por favor, estamos sob ataque imperial! Eles estão por toda parte! Não houve aviso nenhum!"
+m01reb02 "Destruição total! Eles romperam nossos escudos... romperam nossos escudos!"
+distress "Aqui é a Base Tak chamando quem estiver na escuta. Por favor, estamos sob ataque imperial! [Distorção] Eles estão por to... nenhum avi... ...ição total. Eles romperam nossos escudos... romperam nossos escudos! [estática]"
+m01kyl02 "Interessante... parece um ataque imperial comum... a não ser por aqueles sons."
+m01mma04 "Muito perspicaz, comandante. Sei que você entende que tudo o que tratamos aqui é confidencial." 5.0
+m01mma05 "Este oficial imperial, Crix Madine, quer desertar para a Aliança. Ele nos passou informações sobre o desenvolvimento de uma nova arma imperial. Acreditamos que os sons que você ouviu vêm dessa arma. Um novo tipo de stormtrooper: o Dark Trooper." 17.3
+m01kyl03 "Um novo stormtrooper capaz de arrasar uma base rebelde tão depressa? Eu devia ter continuado trabalhando para o Império."
+m01mma06 "O comando rebelde não está levando isso na brincadeira. Eles me autorizaram a contratá-lo para descobrir se há uma ameaça e, se houver, acabar com ela. Isto é, se você ainda estiver do nosso lado." 12.5
+m01kyl04 "Isso pode ser interessante... [longa pausa] Tudo bem, estou dentro. Mas acho que vou precisar de ajuda nessa. Quero a Jan Ors como minha oficial de missão."
+m01mma07 "Certamente. Então deixo a Jan passar os detalhes dos objetivos da sua missão. Obrigada, comandante, e que a Força esteja com você."
+
+//Antes da M06 (Centro de Detenção)
+m05moc01 "Esta desculpa desprezível de oficial não vai mais revelar informação alguma àquele rebelde, Kyle Katarn." 7
+m05vdr01 "Não será tão fácil lidar com Katarn. Ele é muito engenhoso, mais engenhoso, ao que parece, até que os seus dark troopers."
+m05moc02 "Entendo a ameaça, Lorde Vader. Katarn já foi um oficial imperial impressionante, mas era fraco e desistiu da luta pela nossa nova ordem. Eu não confiaria muito nas habilidades dele. Katarn nunca chegará perto desta nave. Meu novo contratado cuidará disso..." 19.5
+guncock "[Blaster sendo engatilhado]"
+
+//Antes da M10 (Nave de Jabba)
+ray      "[Raio pulsando]" 2.9
+hyp-in-8 "[Motores zunindo]" 3
+shiplock "[Estrondo metálico]"
+snort    "[Gamorreanos grunhindo]"
+m10kyl01 "Jabba? O que você fez com a Jan? Se acontecer alguma coisa com ela, eu mesmo enfio meu blaster na sua garganta nojenta."
+m10kyl02 "Queria que você estivesse aqui também, Jabba. Nada como um dragão kell assado."
+pigpush  "[Grunhidos gamorreanos]"
+
+//M16 (não usado?)
+m16moc02 "Você é um adversário excelente, comandante. A chama do guerreiro arde em sua alma. É uma pena que não sejamos aliados."
+m16moc03 "É lamentável que você não aprecie o que estou construindo aqui, comandante. Tudo isto é pela glória do soldado e pela sua guerra suprema, algo que a alma de um guerreiro, como a sua, deveria entender."
+m16moc04 "Não há glória? Então por que você luta nesta guerra?"
+m16moc05 "Você se ilude, comandante. Todos lutamos pela liberdade. Pena que você nunca verá a conclusão do Arc Hammer e o seu verdadeiro propósito!"
+
+
+//Depois da M16 (Arc Hammer)
+m16vdr01 "Este é um revés lamentável. A Força é intensa em Katarn..." 4.5
+
+//DIVERSOS
+m12imp01 "Nave contrabandista, sua rota está livre. Inicie o procedimento de acoplagem." 4.5
+xw-nf-1  "[Motores rugindo]"
+ex-grom1 "[Estrondos distantes]" 4
+tube1    "[Mecanismos zumbindo]"

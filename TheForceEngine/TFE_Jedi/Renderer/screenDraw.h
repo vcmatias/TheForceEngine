@@ -29,6 +29,7 @@ namespace TFE_Jedi
 	};
 
 	void screen_clear();
+	bool screen_isGPUEnabled();
 	void screen_enableGPU(bool enable);
 	void screenDraw_beginLines(u32 width, u32 height);
 	void screenDraw_endLines();

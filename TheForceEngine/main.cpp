@@ -32,7 +32,9 @@
 #include <cinttypes>
 #include <time.h>
 #include <sys/types.h>
+#ifndef __ANDROID__
 #include <sys/timeb.h>
+#endif
 #include <TFE_DarkForces/hud.h>
 #include <TFE_DarkForces/mission.h>
 #include <TFE_Input/replay.h>
@@ -497,8 +499,17 @@ bool validatePath()
 	return TFE_Paths::hasPath(PATH_SOURCE_DATA);
 }
 
+#ifdef __ANDROID__
+extern "C" void tfe_android_prepare();
+extern "C" int tfe_android_args(int argc, char*** argv);
+#include <tfe_xr.h>
+#endif
 int main(int argc, char* argv[])
 {
+#ifdef __ANDROID__
+	tfe_android_prepare();
+	argc = tfe_android_args(argc, &argv);
+#endif
 	#if INSTALL_CRASH_HANDLER
 	TFE_CrashHandler::setProcessExceptionHandlers();
 	TFE_CrashHandler::setThreadExceptionHandlers();
@@ -540,6 +551,17 @@ int main(int argc, char* argv[])
 
 	// Override settings with command line options.
 	parseCommandLine(argc, argv);
+#ifdef __ANDROID__
+	{
+		// VR: 8-bit textures shimmer into broken black lines on distant floors at headset resolution.
+		// True color with mipmaps and sharp bilinear keeps the pixel look without the aliasing.
+		TFE_Settings_Graphics* g = TFE_Settings::getGraphicsSettings();
+		g->colorMode = COLORMODE_TRUE_COLOR;
+		g->useMipmapping = true;
+		g->useBilinear = true;
+		g->bilinearSharpness = 1.0f;
+	}
+#endif
 
 	// Setup game paths.
 	// Get the current game.
@@ -690,6 +712,9 @@ int main(int argc, char* argv[])
 		// System events
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) { handleEvent(event); }
+#ifdef __ANDROID__
+		tfe_xr_begin_frame();
+#endif
 
 		// Inputs Main Entry - skip frame any further processing during replay pause
 		if (!inputMapping_handleInputs())

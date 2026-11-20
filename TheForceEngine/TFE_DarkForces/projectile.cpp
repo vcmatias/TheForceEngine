@@ -389,6 +389,9 @@ namespace TFE_DarkForces
 		return s_projGravityAccel;
 	}
 
+#ifdef __ANDROID__
+	void weapon_vrProjectileCreated(SecObject* proj, fixed16_16 x, fixed16_16 y, fixed16_16 z);
+#endif
 	Logic* createProjectile(ProjectileType type, RSector* sector, fixed16_16 x, fixed16_16 y, fixed16_16 z, SecObject* obj)
 	{
 		ProjectileLogic* projLogic = (ProjectileLogic*)allocator_newItem(s_projectiles);
@@ -420,6 +423,9 @@ namespace TFE_DarkForces
 		projLogic->minDmg  = 0;
 
 		obj_addLogic(projObj, (Logic*)projLogic, LOGIC_PROJECTILE, s_projectileTask, projectileLogicCleanupFunc);
+#ifdef __ANDROID__
+		weapon_vrProjectileCreated(projObj, x, y, z);
+#endif
 		
 		TFE_ExternalData::ExternalProjectile* externalProjectiles = TFE_ExternalData::getExternalProjectiles();
 

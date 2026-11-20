@@ -11,7 +11,7 @@ void main()
 	vec3 viewNormal = computeViewNormal(Frag_Pos);
 	float viewFalloff = computeViewFalloff(Frag_Pos, viewNormal);
 	float heightScale = max(0.0, -Frag_GridHeight*8.0);
-	if (heightScale > 0) { heightScale = min(1.0, 1.0 / heightScale); }
+	if (heightScale > 0.0) { heightScale = min(1.0, 1.0 / heightScale); }
 	else { heightScale = 1.0; }
 
 	vec3 outColor = vec3(0.0);

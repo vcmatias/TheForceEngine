@@ -12,9 +12,9 @@ endif ()
 if(${ARCHFLAGS} MATCHES "^arm")
    if(CMAKE_ASM_COMPILER_WORKS)
        list(APPEND SOURCES
-           TheForceEngine/TFE_ForceScript/Angelscript/angelscript/source/as_callfunc_arm_gcc.S)
+           ${CMAKE_CURRENT_SOURCE_DIR}/Angelscript/angelscript/source/as_callfunc_arm_gcc.S)
        set_property(SOURCE
-           TheForceEngine/TFE_ForceScript/Angelscript/angelscript/source/as_callfunc_arm_gcc.S
+           ${CMAKE_CURRENT_SOURCE_DIR}/Angelscript/angelscript/source/as_callfunc_arm_gcc.S
            APPEND PROPERTY COMPILE_FLAGS " -Wa,-mimplicit-it=always")
    else()
        message(FATAL ERROR "ARM target requires a working assembler")
@@ -25,10 +25,10 @@ if(${ARCHFLAGS} MATCHES "^aarch64")
    if(CMAKE_ASM_COMPILER_WORKS)
        if(NOT APPLE)
            list(APPEND SOURCES
-               TheForceEngine/TFE_ForceScript/Angelscript/angelscript/source/as_callfunc_arm64_gcc.S)
+               ${CMAKE_CURRENT_SOURCE_DIR}/Angelscript/angelscript/source/as_callfunc_arm64_gcc.S)
        else()
            list(APPEND SOURCES
-               TheForceEngine/TFE_ForceScript/Angelscript/angelscript/source/as_callfunc_arm64_xcode.S)
+               ${CMAKE_CURRENT_SOURCE_DIR}/Angelscript/angelscript/source/as_callfunc_arm64_xcode.S)
        endif()
    else()
        message(FATAL ERROR "ARM target requires a working assembler")

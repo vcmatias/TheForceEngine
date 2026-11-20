@@ -1,3 +1,4 @@
+#include <TFE_System/system.h>
 #include <cstring>
 
 #include <TFE_System/math.h>
@@ -23,8 +24,80 @@ namespace TFE_Jedi
 	Vec3f s_cameraDirXZ;
 	Vec3f s_cameraRight;
 	
+#ifdef __ANDROID__
+}
+#include <tfe_xr.h>
+#include <android/log.h>
+namespace TFE_Jedi
+{
+#endif
 namespace RClassic_GPU
 {
+#ifdef __ANDROID__
+	static f32 s_vrBodyYaw = 0.0f;
+	static Vec3f s_vrBodyPos = { 0 };
+
+	// TFE view space is x right, y down, z back (world y points down); OpenXR is y up.
+	void vrSetCamera(s32 eye, bool traverse)
+	{
+		f32 q[4], e[3], fov[4];
+		if (traverse && eye >= 0)
+		{
+			// Portal traversal for one eye: the head orientation and wide field of view, from the
+			// eye position, so occlusion splits match what that eye sees.
+			f32 q2[4], fov2[4];
+			tfe_xr_get_view(-1, q, e, fov);
+			tfe_xr_get_view(eye, q2, e, fov2);
+		}
+		else { tfe_xr_get_view(eye, q, e, fov); }
+
+		f32 sinYaw, cosYaw;
+		sinCosFlt(-s_vrBodyYaw, &sinYaw, &cosYaw);
+		const f32 B[3][3] = { { cosYaw, 0.0f, sinYaw }, { 0.0f, 1.0f, 0.0f }, { sinYaw, 0.0f, -cosYaw } };
+
+		// Head rotation (columns = rotated axes) converted to TFE view axes: Q' = D Q D, D = diag(1,-1,1).
+		const f32 x = q[0], y = q[1], z = q[2], w = q[3];
+		f32 Q[3][3] =
+		{
+			{ 1 - 2*(y*y + z*z), 2*(x*y - z*w),     2*(x*z + y*w) },
+			{ 2*(x*y + z*w),     1 - 2*(x*x + z*z), 2*(y*z - x*w) },
+			{ 2*(x*z - y*w),     2*(y*z + x*w),     1 - 2*(x*x + y*y) },
+		};
+		const f32 D[3] = { 1.0f, -1.0f, 1.0f };
+		for (s32 r = 0; r < 3; r++) for (s32 c = 0; c < 3; c++) { Q[r][c] *= D[r] * D[c]; }
+
+		// M = Q'^T * B
+		f32 M[3][3];
+		for (s32 r = 0; r < 3; r++) for (s32 c = 0; c < 3; c++)
+		{
+			M[r][c] = Q[0][r]*B[0][c] + Q[1][r]*B[1][c] + Q[2][r]*B[2][c];
+		}
+		s_cameraMtx.m0 = { M[0][0], M[0][1], M[0][2] };
+		s_cameraMtx.m1 = { M[1][0], M[1][1], M[1][2] };
+		s_cameraMtx.m2 = { M[2][0], M[2][1], M[2][2] };
+		s_cameraDir   = { -s_cameraMtx.m2.x, -s_cameraMtx.m2.y, -s_cameraMtx.m2.z };
+		s_cameraRight = {  s_cameraMtx.m0.x,  s_cameraMtx.m0.y,  s_cameraMtx.m0.z };
+
+		// Position: body + B^T * (D * e * unitsPerMeter)
+		const f32 u = tfe_xr_units_per_meter();
+		const f32 ev[3] = { e[0] * u, -e[1] * u, e[2] * u };
+		s_cameraPos.x = s_vrBodyPos.x + B[0][0]*ev[0] + B[1][0]*ev[1] + B[2][0]*ev[2];
+		s_cameraPos.y = s_vrBodyPos.y + B[0][1]*ev[0] + B[1][1]*ev[1] + B[2][1]*ev[2];
+		s_cameraPos.z = s_vrBodyPos.z + B[0][2]*ev[0] + B[1][2]*ev[1] + B[2][2]*ev[2];
+
+		// Projection. Eyes render straight into the OpenXR swapchain (GL orientation),
+		// so the y row is negated compared to TFE's own (flipped) render targets.
+		const f32 zNear = 0.01f, zFar = 4096.0f;
+		const f32 l = fov[0], r = fov[1], t = fov[2], b = fov[3];
+		Mat4 p = { 0 };
+		p.m0 = { 2.0f / (r - l), 0.0f, (r + l) / (r - l), 0.0f };
+		const f32 ys = (eye < 0 || traverse) ? 1.0f : -1.0f;
+		p.m1 = { 0.0f, ys * 2.0f / (t - b), (t + b) / (t - b), 0.0f };
+		p.m2 = { 0.0f, 0.0f, zFar / (zNear - zFar), zNear * zFar / (zNear - zFar) };
+		p.m3 = { 0.0f, 0.0f, -1.0f, 0.0f };
+		s_cameraProj = p;
+	}
+#endif
 	void resetState()
 	{
 	}
@@ -96,6 +169,23 @@ namespace RClassic_GPU
 		s_cameraMtx.m2 = { sinYaw * cosPitch, -sinPitch, -cosYaw * cosPitch };
 		s_cameraDir    = { -s_cameraMtx.m2.x, -s_cameraMtx.m2.y, -s_cameraMtx.m2.z };
 		s_cameraRight  = {  s_cameraMtx.m0.x,  s_cameraMtx.m0.y,  s_cameraMtx.m0.z };
+#ifdef __ANDROID__
+		s_vrBodyYaw = yaw;
+		s_vrBodyPos = s_cameraPos;
+		{
+			static s32 s_posLog = 0;
+			if ((++s_posLog % 72) == 0)
+			{
+				__android_log_print(ANDROID_LOG_INFO, "TFEQuestPos", "body yaw=%.0f pos=%.2f %.2f %.2f", yaw, camX, camY, camZ);
+				TFE_System::logWrite(LOG_MSG, "VRCam", "body yaw=%.0f eye=%.2f %.2f %.2f", yaw, camX, camY, camZ);
+			}
+		}
+		if (tfe_xr_world_ready())
+		{
+			// Portal traversal uses the head with a field of view covering both eyes.
+			vrSetCamera(-1, false);
+		}
+#endif
 	}
 
 	void transformPointByCamera(vec3_float* worldPoint, vec3_float* viewPoint)

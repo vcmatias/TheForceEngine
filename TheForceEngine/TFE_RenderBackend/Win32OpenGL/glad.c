@@ -2329,6 +2329,10 @@ static int glad_gl_find_core_gl(void) {
     }
 
     GLAD_IMPL_UTIL_SSCANF(version, "%d.%d", &major, &minor);
+#ifdef __ANDROID__
+    /* GLES 3.2 exposes the GL 3.3 entry points TFE uses (samplers, etc.). */
+    if (major == 3 && minor >= 2) { minor = 3; }
+#endif
 
     GLAD_GL_VERSION_1_0 = (major == 1 && minor >= 0) || major > 1;
     GLAD_GL_VERSION_1_1 = (major == 1 && minor >= 1) || major > 1;

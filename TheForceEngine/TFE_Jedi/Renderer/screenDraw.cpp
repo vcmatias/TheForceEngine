@@ -7,6 +7,10 @@
 
 #include "screenDraw.h"
 
+#ifdef __ANDROID__
+extern "C" int tfe_xr_active(void);
+#endif
+
 namespace TFE_Jedi
 {
 	enum ClipLines
@@ -27,6 +31,8 @@ namespace TFE_Jedi
 		s_transColor = 0;
 		s_gpuEnabled = false;
 	}
+
+	bool screen_isGPUEnabled() { return s_gpuEnabled; }
 
 	void screen_enableGPU(bool enable)
 	{
@@ -82,6 +88,10 @@ namespace TFE_Jedi
 	{
 		if (s_gpuEnabled)
 		{
+#ifdef __ANDROID__
+			// VR: the GPU line path ignores the rect; clip so map lines stay out of the HUD band.
+			if (tfe_xr_active() && !screen_clipLineToRect(rect, &x0, &z0, &x1, &z1)) { return; }
+#endif
 			screenGPU_drawLine(rect, x0, z0, x1, z1, color);
 			return;
 		}

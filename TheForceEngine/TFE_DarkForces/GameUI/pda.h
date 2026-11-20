@@ -15,4 +15,8 @@ namespace TFE_DarkForces
 
 	JBool pda_isOpen();
 	void  pda_update();
+#ifdef __ANDROID__
+	void pda_vrReportCanvas();
+	void pda_vrScreenPalette();
+#endif
 }

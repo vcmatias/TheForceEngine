@@ -12,6 +12,10 @@
 #include <TFE_Jedi/Level/levelTextures.h>
 #include <TFE_Jedi/Math/fixedPoint.h>
 #include <TFE_Jedi/Math/core_math.h>
+#ifdef __ANDROID__
+#include <tfe_vox.h>
+extern "C" int tfe_df_vr_projectile_hidden(const void* objPtr);
+#endif
 #include <TFE_Jedi/Renderer/jediRenderer.h>
 #include <TFE_Settings/settings.h>
 
@@ -48,6 +52,13 @@
 #define PTR_OFFSET(ptr, base) size_t((u8*)ptr - (u8*)base)
 using namespace TFE_RenderBackend;
 
+#ifdef __ANDROID__
+#include <vector>
+#include <TFE_Jedi/Level/rtexture.h>
+#include <TFE_Asset/spriteAsset_Jedi.h>
+#include <tfe_xr.h>
+#include <TFE_RenderBackend/Win32OpenGL/gl.h>
+#endif
 namespace TFE_Jedi
 {
 	enum UploadFlags
@@ -983,6 +994,9 @@ namespace TFE_Jedi
 				texturepacker_commit();
 			}
 
+#ifdef __ANDROID__
+			vox_prepareLevel();
+#endif
 			model_loadGpuModels();
 			// Update the color map based on interpolation or true color settings.
 			updateColorMap();
@@ -1013,6 +1027,9 @@ namespace TFE_Jedi
 					texturepacker_commit();
 				}
 				// Reload models.
+#ifdef __ANDROID__
+				vox_prepareLevel();
+#endif
 				model_loadGpuModels();
 			}
 			s_gpuFrame++;
@@ -1636,6 +1653,22 @@ namespace TFE_Jedi
 			{
 				const s32 type = obj->type;
 				Vec3f posWS = { fixed16ToFloat(obj->posWS.x), fixed16ToFloat(obj->posWS.y), fixed16ToFloat(obj->posWS.z) };
+#ifdef __ANDROID__
+				// VR: a bolt between its start (back on the barrel line) and the muzzle is not drawn yet.
+				if ((obj->entityFlags & ETFLAG_PROJECTILE) && tfe_df_vr_projectile_hidden(obj)) { continue; }
+				// VR: voxel model in place of the sprite (fan voxel pack), when there is one.
+				if (type == OBJ_TYPE_SPRITE || type == OBJ_TYPE_FRAME)
+				{
+					fixed16_16 voxXf[9];
+					JediModel* vox = vox_objectModel(obj, voxXf);
+					if (vox)
+					{
+						const f32 lit = ((obj->flags & OBJ_FLAG_FULLBRIGHT) || s_fullBright) ? f32(MAX_LIGHT_LEVEL - 1) : ambient;
+						model_add(obj, vox, posWS, voxXf, lit, floorOffset, ceilOffset, portalInfo);
+						continue;
+					}
+				}
+#endif
 				if (type == OBJ_TYPE_SPRITE || type == OBJ_TYPE_FRAME)
 				{
 					if (type == OBJ_TYPE_SPRITE)
@@ -1671,6 +1704,21 @@ namespace TFE_Jedi
 				}
 			}
 		}
+#ifdef __ANDROID__
+		// VR: voxel wall pieces (switches, panels) on the sign textures of this sector's walls.
+		for (s32 w = 0; w < curSector->wallCount; w++)
+		{
+			RWall* wall = &curSector->walls[w];
+			if (!wall->signTex) { continue; }
+			fixed16_16 xf[9];
+			f32 p[3];
+			JBool bright = JFALSE;
+			JediModel* vox = vox_wallModel(wall, xf, p, &bright);
+			if (!vox) { continue; }
+			const f32 lit = (bright || s_fullBright) ? f32(MAX_LIGHT_LEVEL - 1) : ambient;
+			model_add(nullptr, vox, { p[0], p[1], p[2] }, xf, lit, floorOffset, ceilOffset, portalInfo);
+		}
+#endif
 	}
 		
 	void traverseSector(RSector* curSector, RSector* prevSector, RWall* portalWall, s32 prevPortalId, s32& level, u32& uploadFlags, Vec2f p0, Vec2f p1)
@@ -2065,18 +2113,259 @@ namespace TFE_Jedi
 		TextureGpu::clearSlots(3);
 	}
 		
+#ifdef __ANDROID__
+	// Draws the already traversed scene once per eye into the OpenXR swapchains.
+	// The game's own hand bitmap (fist idle frame) as the 3D hand texture.
+	static void uploadHandTexture()
+	{
+		if (!tfe_xr_hands_need_texture()) { return; }
+		// The palette fades in from black when a level starts: wait until it is lit.
+		static s32 s_frame = 0;
+		if ((++s_frame % 30) != 0) { return; }
+		TextureData* tex = bitmap_load("RHAND1.BM", 1, POOL_GAME);
+		const u32* pal = TFE_RenderBackend::getPalette();
+		if (!tex || !tex->image || !pal) { return; }
+		const s32 w = tex->width, h = tex->height;
+		std::vector<u8> rgba(w * h * 4);
+		u32 sum[3] = { 0, 0, 0 }, count = 0;
+		for (s32 x = 0; x < w; x++) for (s32 y = 0; y < h; y++)
+		{
+			const u8 idx = tex->image[x * h + y];
+			if (!idx) { continue; }
+			const u32 c = pal[idx];
+			sum[0] += c & 0xff; sum[1] += (c >> 8) & 0xff; sum[2] += (c >> 16) & 0xff; count++;
+		}
+		const u8 avg[3] = { u8(count ? sum[0] / count : 170), u8(count ? sum[1] / count : 130), u8(count ? sum[2] / count : 105) };
+		if (count && (avg[0] + avg[1] + avg[2]) < 60) { return; }
+		for (s32 x = 0; x < w; x++) for (s32 y = 0; y < h; y++)
+		{
+			const u8 idx = tex->image[x * h + y];
+			u8* o = &rgba[(y * w + x) * 4];
+			if (idx) { const u32 c = pal[idx]; o[0] = c & 0xff; o[1] = (c >> 8) & 0xff; o[2] = (c >> 16) & 0xff; }
+			else { o[0] = avg[0]; o[1] = avg[1]; o[2] = avg[2]; }
+			o[3] = 255;
+		}
+		tfe_xr_set_hand_texture(rgba.data(), w, h);
+	}
+
+	// Pickup sprites (side views) become the voxel weapons held in the hand.
+	static void uploadWeaponSprites()
+	{
+		static const char* c_names[10] = { nullptr, nullptr, "IST-GUNI.FME", "IDET.FME", "IAUTOGUN.FME", "IFUSION.FME", "IMORTAR.FME", "IMINE.FME", "ICONCUS.FME", "ICANNON.FME" };
+		static s32 s_frame = 0;
+		if ((++s_frame % 30) != 15) { return; }
+		const u32* pal = TFE_RenderBackend::getPalette();
+		if (!pal) { return; }
+		// Same fade-in check as the hands: skip while the palette is still black.
+		{
+			u32 sum = 0;
+			for (s32 i = 1; i < 256; i++) { sum += (pal[i] & 0xff) + ((pal[i] >> 8) & 0xff) + ((pal[i] >> 16) & 0xff); }
+			if (sum < 255 * 3 * 40) { return; }
+		}
+		for (s32 id = 2; id < 10; id++)
+		{
+			if (!tfe_xr_weapon_needs_sprite(id)) { continue; }
+			JediFrame* frame = TFE_Sprite_Jedi::getFrame(c_names[id], POOL_GAME);
+			if (!frame) { continue; }
+			const WaxCell* cell = WAX_CellPtr(frame, frame);
+			if (!cell || cell->sizeX <= 0 || cell->sizeY <= 0 || cell->sizeX > 256 || cell->sizeY > 256) { continue; }
+			const s32 w = cell->sizeX, h = cell->sizeY;
+			std::vector<u8> idx(w * h, 0);   // [x * h + y], y from the bottom
+			const u8* cellBase = (const u8*)cell;
+			if (cell->compressed == 1)
+			{
+				const u32* cols = (const u32*)((const u8*)frame + cell->columnOffset);
+				for (s32 x = 0; x < w; x++)
+				{
+					const u8* p = cellBase + cols[x];
+					s32 y = 0;
+					while (y < h)
+					{
+						const u8 n = *p++;
+						if (n <= 128) { for (s32 i = 0; i < n && y < h; i++) { idx[x * h + y++] = *p++; } }
+						else { y += n - 128; }
+					}
+				}
+			}
+			else
+			{
+				const u8* data = cellBase + sizeof(WaxCell);
+				for (s32 x = 0; x < w; x++) for (s32 y = 0; y < h; y++) { idx[x * h + y] = data[x * h + y]; }
+			}
+			std::vector<u8> rgba(w * h * 4, 0);
+			for (s32 y = 0; y < h; y++) for (s32 x = 0; x < w; x++)
+			{
+				const u8 c = idx[x * h + y];
+				if (!c) { continue; }
+				u8* o = &rgba[(y * w + x) * 4];
+				o[0] = pal[c] & 0xff; o[1] = (pal[c] >> 8) & 0xff; o[2] = (pal[c] >> 16) & 0xff; o[3] = 255;
+			}
+			tfe_xr_set_weapon_sprite(id, rgba.data(), w, h);
+		}
+	}
+
+	// Original first-person weapon art: projected onto the voxel weapons (see tfe_xr_weapons.cpp).
+	[[maybe_unused]] static void uploadWeaponViews()
+	{
+		static const struct { const char* name; s32 x0, y0; } c_views[10] =
+		{
+			{ nullptr, 0, 0 }, { "PISTOL1.BM", 165, 142 }, { "RIFLE1.BM", 113, 127 }, { "THERM1.BM", 161, 131 }, { "AUTOGUN1.BM", 156, 138 },
+			{ "FUSION1.BM", 19, 152 }, { "MORTAR1.BM", 123, 119 }, { "CLAY1.BM", 105, 153 }, { "CONCUSS1.BM", 130, 131 }, { "ASSAULT3.BM", 224, 81 },
+		};
+		static s32 s_frame = 0;
+		if ((++s_frame % 30) != 20) { return; }
+		const u32* pal = TFE_RenderBackend::getPalette();
+		if (!pal) { return; }
+		{
+			u32 sum = 0;
+			for (s32 i = 1; i < 256; i++) { sum += (pal[i] & 0xff) + ((pal[i] >> 8) & 0xff) + ((pal[i] >> 16) & 0xff); }
+			if (sum < 255 * 3 * 40) { return; }
+		}
+		for (s32 id = 1; id < 10; id++)
+		{
+			if (!tfe_xr_weapon_needs_view(id)) { continue; }
+			TextureData* tex = bitmap_load(c_views[id].name, 1, POOL_GAME);
+			if (!tex || !tex->image) { continue; }
+			const s32 w = tex->width, h = tex->height;
+			std::vector<u8> rgba(w * h * 4, 0);
+			for (s32 x = 0; x < w; x++) for (s32 y = 0; y < h; y++)
+			{
+				const u8 idx = tex->image[x * h + y];
+				if (!idx) { continue; }
+				u8* o = &rgba[((h - 1 - y) * w + x) * 4];
+				o[0] = pal[idx] & 0xff; o[1] = (pal[idx] >> 8) & 0xff; o[2] = (pal[idx] >> 16) & 0xff; o[3] = 255;
+			}
+			tfe_xr_set_weapon_view(id, rgba.data(), w, h, c_views[id].x0, c_views[id].y0);
+			return;   // one weapon per call: the projection takes a few milliseconds
+		}
+	}
+
+	// The sector that holds the eye. The head moves away from the body (room scale, eye offset),
+	// so near a portal (stairs are rows of thin sectors) the eye is already in the next sector:
+	// traversing from the body sector then culls everything ahead of the eye (black frame).
+	static RSector* vrEyeSector(RSector* start, const Vec3f& p)
+	{
+		const fixed16_16 x = floatToFixed16(p.x), y = floatToFixed16(p.y), z = floatToFixed16(p.z);
+		auto inside = [&](RSector* s) { return s && y >= s->ceilingHeight && y <= s->floorHeight && sector_pointInsideDF(s, x, z); };
+		if (!start || inside(start)) { return start; }
+		// Neighbors first (two portal steps), then the whole level.
+		for (s32 w = 0; w < start->wallCount; w++)
+		{
+			RSector* n = start->walls[w].nextSector;
+			if (inside(n)) { return n; }
+		}
+		for (s32 w = 0; w < start->wallCount; w++)
+		{
+			RSector* n = start->walls[w].nextSector;
+			if (!n) { continue; }
+			for (s32 w2 = 0; w2 < n->wallCount; w2++)
+			{
+				RSector* n2 = n->walls[w2].nextSector;
+				if (n2 != start && inside(n2)) { return n2; }
+			}
+		}
+		RSector* s = sector_which3D(x, y, z);
+		return s ? s : start;
+	}
+
+	static void drawSceneVR(RSector* sector)
+	{
+		uploadHandTexture();
+		uploadWeaponSprites();
+		const Mat3 camMtx = s_cameraMtx;
+		const Mat4 camProj = s_cameraProj;
+		const Vec3f camPos = s_cameraPos, camDir = s_cameraDir, camRight = s_cameraRight;
+		GLint prevFbo = 0, prevViewport[4];
+		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
+		glGetIntegerv(GL_VIEWPORT, prevViewport);
+
+		for (s32 eye = 0; eye < 2; eye++)
+		{
+			TFE_RenderState::setStateEnable(true, STATE_DEPTH_WRITE);
+			TFE_RenderState::setColorMask(CMASK_ALL);
+			// Traverse the portals from this eye, so walls are split exactly at the silhouettes it sees.
+			RClassic_GPU::vrSetCamera(eye, true);
+			const bool any = traverseScene(vrEyeSector(sector, s_cameraPos));
+			s32 w, h;
+			tfe_xr_bind_eye(eye, &w, &h);
+			RClassic_GPU::vrSetCamera(eye, false);
+			if (!any)
+			{
+				tfe_xr_unbind_eye(eye);
+				continue;
+			}
+			// The eye projection flips y, which flips the triangle winding.
+			glFrontFace(GL_CW);
+
+			TFE_RenderState::setStateEnable(false, STATE_BLEND);
+			TFE_RenderState::setStateEnable(true, STATE_DEPTH_WRITE | STATE_DEPTH_TEST | STATE_CULLING);
+			for (s32 i = 0; i < SECTOR_PASS_COUNT - 1; i++)
+			{
+				drawPass(SectorPass(i));
+			}
+			drawSprites();
+			drawPass(SECTOR_PASS_TRANS);
+			draw3d();
+
+			glFrontFace(GL_CCW);
+			// 3D hands (own shader, depth tested against the world).
+			TFE_RenderState::enableClipPlanes(0);
+			tfe_xr_draw_hands(eye);
+			TFE_RenderState::clear();
+			tfe_xr_unbind_eye(eye);
+		}
+
+		s_cameraMtx = camMtx; s_cameraProj = camProj;
+		s_cameraPos = camPos; s_cameraDir = camDir; s_cameraRight = camRight;
+		glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
+		glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+	}
+#endif
+
 	void TFE_Sectors_GPU::draw(RSector* sector)
 	{
 		// Check to see if a rendering setting has changed
 		// (this may require a shader recompile)
 		updateShaderSettings(false);
 
+#ifdef __ANDROID__
+		if (tfe_xr_active())
+		{
+			// VR: the world only goes to the eyes (each eye traverses the scene on its own). Frames
+			// without an eye pass must not draw it into the 2D screen.
+			if (tfe_xr_world_ready()) { drawSceneVR(sector); }
+			s_indexBuffer.unbind();
+			s_sectorGpuBuffer.unbind(0);
+			s_wallGpuBuffer.unbind(1);
+			TextureGpu::clear(5);
+			TextureGpu::clear(6);
+			return;
+		}
+#endif
 		// Build the draw list.
 		if (!traverseScene(sector))
 		{
+#ifdef __ANDROID__
+			static s32 s_noTraverse = 0;
+			if ((s_noTraverse++ % 72) == 0) { TFE_System::logWrite(LOG_MSG, "VR", "sector draw: traverse failed"); }
+#endif
 			return;
 		}
 
+#ifdef __ANDROID__
+		if (tfe_xr_world_ready() || tfe_xr_active())
+		{
+			// VR: the world only goes to the eyes. Frames without an eye pass must not draw it
+			// into the 2D screen (it would flash on the screen quad, the watch and the hologram).
+			if (tfe_xr_world_ready()) { drawSceneVR(sector); }
+			s_indexBuffer.unbind();
+			s_sectorGpuBuffer.unbind(0);
+			s_wallGpuBuffer.unbind(1);
+			TextureGpu::clear(5);
+			TextureGpu::clear(6);
+			return;
+		}
+#endif
 		// State
 		TFE_RenderState::setStateEnable(false, STATE_BLEND);
 		TFE_RenderState::setStateEnable(true, STATE_DEPTH_WRITE | STATE_DEPTH_TEST | STATE_CULLING);

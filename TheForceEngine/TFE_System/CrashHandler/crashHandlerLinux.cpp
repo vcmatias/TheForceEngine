@@ -12,6 +12,33 @@
 #include <signal.h>
 #include "crashHandler.h"
 #include <TFE_System/system.h>
+#ifdef __ANDROID__
+#include <unwind.h>
+#include <dlfcn.h>
+#include <ucontext.h>
+struct TfeUnwindState { void** cur; void** end; };
+static _Unwind_Reason_Code tfe_unwind_cb(struct _Unwind_Context* ctx, void* arg)
+{
+	TfeUnwindState* st = (TfeUnwindState*)arg;
+	uintptr_t pc = _Unwind_GetIP(ctx);
+	if (pc) { if (st->cur == st->end) return _URC_END_OF_STACK; *st->cur++ = (void*)pc; }
+	return _URC_NO_REASON;
+}
+static void tfe_log_addr(const char* label, void* addr)
+{
+	Dl_info info;
+	if (dladdr(addr, &info) && info.dli_fname)
+	{
+		TFE_System::logWrite(LOG_ERROR, "CrashHandler", "%s %p %s+0x%zx (%s)", label, addr, info.dli_fname,
+			(size_t)((char*)addr - (char*)info.dli_fbase), info.dli_sname ? info.dli_sname : "?");
+	}
+	else
+	{
+		TFE_System::logWrite(LOG_ERROR, "CrashHandler", "%s %p", label, addr);
+	}
+}
+#endif
+#include <TFE_System/system.h>
 
 
 // On Linux, /proc/self/status contains a "TracerPid:" entry
@@ -70,9 +97,26 @@ static void tfe_sigaction(int signo, siginfo_t *siginfo, void *uctx)
 
 	// backtrace() can also segfault; purposefully ignore SEGV before calling it.
 	signal(SIGSEGV, SIG_IGN);
+#ifdef __ANDROID__
+	entries = 0; ents = nullptr; (void)i;
+	{
+		ucontext_t* uc = (ucontext_t*)uctx;
+		if (uc)
+		{
+			tfe_log_addr("pc", (void*)uc->uc_mcontext.pc);
+			tfe_log_addr("lr", (void*)uc->uc_mcontext.regs[30]);
+		}
+		TfeUnwindState st = { buf, buf + 64 };
+		_Unwind_Backtrace(tfe_unwind_cb, &st);
+		for (void** p = buf; p < st.cur; p++) { tfe_log_addr("bt", *p); }
+	}
+#else
 	entries = backtrace(buf, 512);
+#endif
 	if (entries) {
+#ifndef __ANDROID__
 		ents = backtrace_symbols(buf, entries);
+#endif
 		TFE_System::logWrite(LOG_ERROR, "CrashHandler", "Backtrace %d:", entries);
 		for (i = 0; i < entries; i++) {
 			TFE_System::logWrite(LOG_ERROR, "CrashHandler", "%03d %s", i, ents[i]);

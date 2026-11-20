@@ -72,6 +72,9 @@ void reticle_enable(bool enable)
 {
 	if (!s_reticleLoaded) { return; }
 	s_enabled = enable && s_settings->reticleEnable;
+#ifdef __ANDROID__
+	s_enabled = false;   // VR: aim with the weapon in hand.
+#endif
 	TFE_PostProcess::enableOverlay(s_reticleId, s_enabled);
 }
 

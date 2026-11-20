@@ -50,6 +50,9 @@
 using namespace TFE_Input;
 using namespace TFE_Audio;
 
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#endif
 namespace TFE_FrontEndUI
 {
 	struct UiImage
@@ -84,6 +87,7 @@ namespace TFE_FrontEndUI
 		CONFIG_SYSTEM,
 		CONFIG_A11Y,
 		CONFIG_DEVELOPER,
+		CONFIG_VR,
 		CONFIG_COUNT,
 	};
 
@@ -113,7 +117,8 @@ namespace TFE_FrontEndUI
 		"Sound",
 		"System",
 		"Accessibility",
-		"Developer"
+		"Developer",
+		"VR"
 	};
 
 	static const Vec2i c_resolutionDim[] =
@@ -271,6 +276,7 @@ namespace TFE_FrontEndUI
 	void configGraphics();
 	void configHud();
 	void configSound();
+	void configVR();
 	void configSystem();
 	void DrawLabelledIntSlider(float labelWidth, float valueWidth, const char* label, const char* tag, int* value, int min, int max);
 	void DrawLabelledFloatSlider(float labelWidth, float valueWidth, const char* label, const char* tag, float* value, float min, float max);
@@ -890,6 +896,14 @@ namespace TFE_FrontEndUI
 				TFE_Settings::writeToDisk();
 				inputMapping_serialize();
 			}
+#ifdef __ANDROID__
+			if (tfe_xr_active() && ImGui::Button("VR", sideBarButtonSize))
+			{
+				s_configTab = CONFIG_VR;
+				TFE_Settings::writeToDisk();
+				inputMapping_serialize();
+			}
+#endif
 			if (ImGui::Button("Sound", sideBarButtonSize))
 			{
 				s_configTab = CONFIG_SOUND;
@@ -1002,6 +1016,9 @@ namespace TFE_FrontEndUI
 				break;
 			case CONFIG_DEVELOPER:
 				configDeveloper();
+				break;
+			case CONFIG_VR:
+				configVR();
 				break;
 			};
 			renderBackground(forceTextureUpdate);
@@ -3418,6 +3435,100 @@ namespace TFE_FrontEndUI
 		snprintf(sliderId, 256, "##%s", labelText);
 		ImGui::SliderInt(sliderId, &percValue, 0, 100, "%d%%");
 		*floatValue = clamp(f32(percValue) * 0.01f, 0.0f, 1.0f);
+	}
+
+	// VR settings (Quest port): comfort, locomotion, body, interface, haptics.
+	void configVR()
+	{
+#ifdef __ANDROID__
+		TfeVrOptions* o = tfe_xr_options();
+		bool changed = false;
+		const f32 label = 230.0f * s_uiScale, width = 220.0f * s_uiScale;
+		auto check = [&](const char* text, const char* id, int* v)
+		{
+			bool b = *v != 0;
+			if (ImGui::Checkbox(id, &b)) { *v = b ? 1 : 0; changed = true; }
+			ImGui::SameLine(); ImGui::TextUnformatted(text);
+		};
+		auto slider = [&](const char* text, const char* id, float* v, float mn, float mx, const char* fmt)
+		{
+			ImGui::LabelText("##l", "%s", text); ImGui::SameLine(label);
+			ImGui::SetNextItemWidth(width);
+			if (ImGui::SliderFloat(id, v, mn, mx, fmt)) { changed = true; }
+		};
+
+		ImGui::PushFont(s_dialogFont); ImGui::TextUnformatted("Conforto e locomoção"); ImGui::PopFont();
+		{
+			int mode = o->snapTurn ? 0 : 1;
+			ImGui::LabelText("##l", "Giro"); ImGui::SameLine(label);
+			if (ImGui::RadioButton("Em degraus##turn", mode == 0)) { o->snapTurn = 1; changed = true; }
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Suave##turn", mode == 1)) { o->snapTurn = 0; changed = true; }
+		}
+		if (o->snapTurn) { slider("Ângulo do giro", "##snapAngle", &o->snapAngle, 15.0f, 90.0f, "%.0f graus"); }
+		else { slider("Velocidade do giro", "##smoothSpeed", &o->smoothSpeed, 0.3f, 2.0f, "%.1fx"); }
+		slider("Vinheta ao andar", "##vignette", &o->comfortVignette, 0.0f, 1.0f, "%.1f");
+		{
+			int mode = o->runMode ? 0 : 1;
+			ImGui::LabelText("##l", "Correr (clique no analógico)"); ImGui::SameLine(label);
+			if (ImGui::RadioButton("Liga até parar##run", mode == 0)) { o->runMode = 1; changed = true; }
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Segurar##run", mode == 1)) { o->runMode = 0; changed = true; }
+		}
+		ImGui::Separator();
+
+		ImGui::PushFont(s_dialogFont); ImGui::TextUnformatted("Corpo e altura"); ImGui::PopFont();
+		check("Agachar de verdade", "##physCrouch", &o->physicalCrouch);
+		if (o->physicalCrouch) { slider("Profundidade do agachamento", "##crouchDepth", &o->crouchDepth, 0.2f, 0.6f, "%.2f m"); }
+		slider("Ajuste de altura (sentado)", "##height", &o->heightOffset, -0.3f, 0.8f, "%.2f m");
+		if (ImGui::Button("Recentralizar agora")) { tfe_xr_request_recenter(); }
+		ImGui::Separator();
+
+		ImGui::PushFont(s_dialogFont); ImGui::TextUnformatted("Interface"); ImGui::PopFont();
+		check("HUD no relógio e na arma", "##wristHud", &o->wristHud);
+		{
+			int mode = o->weaponStyle;
+			ImGui::LabelText("##l", "Armas"); ImGui::SameLine(label);
+			if (ImGui::RadioButton("Alta resolução##wpn", mode == 0)) { o->weaponStyle = 0; changed = true; }
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Voxel##wpn", mode == 1)) { o->weaponStyle = 1; changed = true; }
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Voxel fino##wpn", mode == 2)) { o->weaponStyle = 2; changed = true; }
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Blender##wpn", mode == 3)) { o->weaponStyle = 3; changed = true; }
+			ImGui::SameLine();
+			if (ImGui::RadioButton("DFmod##wpn", mode == 4)) { o->weaponStyle = 4; changed = true; }
+		}
+		{
+			int mode = o->wallMode;
+			ImGui::LabelText("##l", "Arma na parede"); ImGui::SameLine(label);
+			if (ImGui::RadioButton("Engolida pela parede##wall", mode == 0)) { o->wallMode = 0; changed = true; }
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Sempre na frente##wall", mode == 1)) { o->wallMode = 1; changed = true; }
+		}
+		check("Mão direita na arma", "##rhand", &o->rightHand);
+		slider("Tamanho do PDA", "##pdaSize", &o->pdaScale, 0.6f, 1.6f, "%.2fx");
+		check("Máscara de gás vista por dentro", "##gasmask", &o->gasMaskView);
+		check("Imprecisão original das armas", "##spread", &o->weaponSpread);
+		{
+			ImGui::LabelText("##lw", "Andar na direção"); ImGui::SameLine(label);
+			if (ImGui::RadioButton("Da cabeça##walk", o->walkDir == 0)) { o->walkDir = 0; changed = true; }
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Controle esq.##walk", o->walkDir == 1)) { o->walkDir = 1; changed = true; }
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Controle dir.##walk", o->walkDir == 2)) { o->walkDir = 2; changed = true; }
+		}
+		check("Mira laser", "##laser", &o->laser);
+		check("Tela de mensagens acompanha a cabeça", "##lazy", &o->lazyScreen);
+		slider("Distância da tela", "##screenDist", &o->screenDistance, 0.8f, 3.0f, "%.1f m");
+		ImGui::Separator();
+
+		ImGui::PushFont(s_dialogFont); ImGui::TextUnformatted("Vibração"); ImGui::PopFont();
+		check("Vibração dos controles", "##haptics", &o->haptics);
+		if (o->haptics) { slider("Intensidade", "##hapticStrength", &o->hapticStrength, 0.1f, 1.0f, "%.1f"); }
+
+		if (changed) { tfe_xr_save_options(); }
+#endif
 	}
 
 	void configSound()

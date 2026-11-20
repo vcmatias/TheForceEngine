@@ -4,6 +4,9 @@
 #include "uiDraw.h"
 #include <TFE_System/system.h>
 #include <TFE_Input/input.h>
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#endif
 
 namespace
 {
@@ -45,6 +48,9 @@ namespace TFE_DarkForces
 
 	void updateEditBox(EditBox* editBox)
 	{
+#ifdef __ANDROID__
+		tfe_xr_request_keyboard();   // VR: show the virtual keyboard while a text field is active
+#endif
 		const char* input = TFE_Input::getBufferedText();
 		const s32 len = (s32)strlen(input);
 		for (s32 c = 0; c < len; c++)

@@ -638,6 +638,18 @@ namespace TFE_DarkForces
 		vfb_setPalette(palette);
 	}
 
+	// VR: RGBA table (r in the low byte) of a palette over the current video palette, without
+	// touching the screen palette (the world keeps its colors behind the mission tablet).
+	void lpalette_vrBuildRgba(LPalette* pal, u32* out)
+	{
+		for (s32 i = 0; i < 256; i++)
+		{
+			LRGB c = s_videoPal->colors[i];
+			if (pal && i >= pal->start && i <= pal->end) { c = pal->colors[i - pal->start]; }
+			out[i] = _CONV_6bitTo8bit(c.r) | (_CONV_6bitTo8bit(c.g) << 8u) | (_CONV_6bitTo8bit(c.b) << 16u) | (0xffu << 24u);
+		}
+	}
+
 	void lpalette_setName(LPalette* pal, u32 resType, const char* name)
 	{
 		pal->resType = resType;

@@ -58,6 +58,7 @@ namespace TFE_DarkForces
 	};
 
 	void lpalette_init();
+	void lpalette_vrBuildRgba(LPalette* pal, u32* out);
 	void lpalette_destroy();
 
 	LPalette* lpalette_load(const char* name);

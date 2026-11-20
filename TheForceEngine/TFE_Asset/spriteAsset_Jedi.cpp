@@ -784,6 +784,31 @@ namespace TFE_Sprite_Jedi
 		freePool(POOL_LEVEL);
 	}
 
+	// TFE VR: names of loaded sprites (for the voxel replacements).
+	const char* getWaxName(const JediWax* wax)
+	{
+		for (s32 p = 0; p < POOL_COUNT; p++)
+		{
+			for (size_t i = 0; i < s_spriteList[p].size(); i++)
+			{
+				if (s_spriteList[p][i] == wax && i < s_spriteNames[p].size()) { return s_spriteNames[p][i].c_str(); }
+			}
+		}
+		return nullptr;
+	}
+
+	const char* getFrameName(const JediFrame* frame)
+	{
+		for (s32 p = 0; p < POOL_COUNT; p++)
+		{
+			for (size_t i = 0; i < s_frameList[p].size(); i++)
+			{
+				if (s_frameList[p][i] == frame && i < s_frameNames[p].size()) { return s_frameNames[p][i].c_str(); }
+			}
+		}
+		return nullptr;
+	}
+
 	bool getWaxIndex(JediWax* wax, s32* index, AssetPool* pool)
 	{
 		for (s32 p = 0; p < POOL_COUNT; p++)

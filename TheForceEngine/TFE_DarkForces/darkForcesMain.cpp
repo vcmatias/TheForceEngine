@@ -1,6 +1,7 @@
 #include <cstring>
 
 #include "darkForcesMain.h"
+#include "GameUI/vrMenu.h"
 #include "agent.h"
 #include "automap.h"
 #include "config.h"
@@ -39,6 +40,9 @@
 #include <TFE_FileSystem/filestream.h>
 #include <TFE_ForceScript/scriptInterface.h>
 #include <TFE_A11y/accessibility.h>
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#endif
 #include <TFE_Audio/midiPlayer.h>
 #include <TFE_Audio/audioSystem.h>
 #include <TFE_Asset/modelAsset_jedi.h>
@@ -46,6 +50,9 @@
 #include <TFE_Archive/archive.h>
 #include <TFE_Archive/zipArchive.h>
 #include <TFE_Archive/gobMemoryArchive.h>
+#include <TFE_Archive/lfdArchive.h>
+#include <map>
+#include <string>
 #include <TFE_Jedi/Level/rfont.h>
 #include <TFE_Jedi/Level/level.h>
 #include <TFE_Jedi/InfSystem/infSystem.h>
@@ -567,6 +574,10 @@ namespace TFE_DarkForces
 	void DarkForces::loopGame()
 	{
 		updateTime();
+#ifdef __ANDROID__
+		vrMenu_roomTextures();
+		vrMenu_pdaBezel();
+#endif
 
 		switch (s_runGameState.state)
 		{
@@ -1457,10 +1468,65 @@ namespace TFE_DarkForces
 		parseKey(&msgs, 230, &s_sharedState.langKeys.k_canc,  KEY_C);
 	}
 
+#ifdef __ANDROID__
+	// Portuguese images: Translation/pt/<ARCHIVE>.LFD holds the translated resources (briefings,
+	// objectives, menu art) and is searched in front of the original archive while the language is "pt".
+	static Archive* df_translationPatch(Archive* archive)
+	{
+		if (TFE_Settings::getA11ySettings()->language != "pt") { return nullptr; }
+		const char* path = archive->getPath();
+		if (!path || !path[0]) { return nullptr; }
+		const char* base = path;
+		for (const char* c = path; *c; c++) { if (*c == '/' || *c == '\\') { base = c + 1; } }
+		char name[64];
+		size_t n = 0;
+		for (; base[n] && n < sizeof(name) - 1; n++) { name[n] = (char)toupper((unsigned char)base[n]); }
+		name[n] = 0;
+		if (strcmp(name, "DFBRIEF.LFD") && strcmp(name, "MENU.LFD") && strcmp(name, "AGENTMNU.LFD")) { return nullptr; }
+		static std::map<std::string, Archive*> s_patches;
+		auto it = s_patches.find(name);
+		if (it != s_patches.end()) { return it->second; }
+		char patchPath[TFE_MAX_PATH];
+		snprintf(patchPath, TFE_MAX_PATH, "%sTranslation/pt/%s", TFE_Paths::getPath(PATH_PROGRAM), name);
+		Archive* patch = nullptr;
+		if (FileUtil::exists(patchPath))
+		{
+			LfdArchive* lfd = new LfdArchive();
+			if (lfd->open(patchPath)) { patch = lfd; }
+			else { delete lfd; }
+			TFE_System::logWrite(LOG_MSG, "Translation", "patch %s: %s", name, patch ? "ok" : "failed");
+		}
+		s_patches[name] = patch;
+		return patch;
+	}
+#endif
+
 	void gameStartup()
 	{
+#ifdef __ANDROID__
+		TFE_Paths::setArchivePatchProvider(df_translationPatch);
+#endif
 		hud_loadGraphics();
+#ifdef __ANDROID__
+		if (tfe_xr_active() && !tfe_xr_options()->langDefaultDone)
+		{
+			// 0.33: the game in Portuguese by default (captions language "pt" with voice and effect
+			// subtitles on; the same language switch picks the translated HUD texts and font).
+			TFE_Settings_A11y* a = TFE_Settings::getA11ySettings();
+			a->language = "pt";
+			a->showCutsceneSubtitles = true; a->showCutsceneCaptions = true;
+			a->showGameplaySubtitles = true; a->showGameplayCaptions = true;
+			TFE_Settings::writeToDisk();
+			TFE_A11Y::refreshFiles();
+			tfe_xr_options()->langDefaultDone = 1;
+			tfe_xr_save_options();
+		}
+#endif
 		hud_loadGameMessages();
+#ifdef __ANDROID__
+		// Portuguese TFE messages ("Jogo salvo.", secrets, cheats) when the language is "pt".
+		if (TFE_Settings::getA11ySettings()->language == "pt") { TFE_System::loadMessages("Translation/pt/TfeMessages.txt"); }
+#endif
 		loadMapNumFont();
 		inf_loadSounds();
 		actor_loadSounds();

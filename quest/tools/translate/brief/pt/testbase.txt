@@ -1,0 +1,11 @@
+bar 3: MISSÃO IV
+bar 15: O PLANETA FEST:
+bar 27: CENTRO IMPERIAL DE PESQUISA
+bar 39: DE ARMAS
+bar 57: CONTEXTO
+bar 258: MISSÃO
+bar 447: OBJETIVOS DA MISSÃO:
+p0: Moff Rebus projetou os protótipos de armas dos Dark Troopers. Ele não revelou muita coisa no interrogatório, mas num dos seus ataques de fúria deixou escapar: "...você tinha que ver os resultados dos nossos testes em Fest... minhas armas vão abrir muitos buracos em muita escória rebelde...". Crix Madine confirmou a existência de um centro imperial de armas no planeta Fest, que faz pesquisa metalúrgica com novas ligas. Saber que tipo de metal eles estão usando nos dará pistas concretas sobre os Dark Troopers.
+p1: Vou deixar você numa velha área de pouso, bem longe da base, cercada de penhascos. Cuidado: um passo em falso e você vira cratera. A base fica enterrada no fundo da rocha, com um acampamento de acesso controlado na frente que a protege de um ataque frontal. Procure outras aberturas que facilitem a entrada. Quando terminar a missão, eu pego você no ponto de desembarque. De resto, é do jeito que você gosta: por sua conta.
+p2: - Infiltrar-se na base e encontrar amostras do metal que eles estão testando.
+p3: - Voltar para a área de pouso.

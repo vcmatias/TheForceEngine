@@ -36,6 +36,10 @@ namespace TFE_Jedi
 	extern JBool s_flatLighting;
 }
 
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#include <TFE_DarkForces/GameUI/pda.h>
+#endif
 namespace TFE_DarkForces
 {
 	///////////////////////////////////////////
@@ -1712,6 +1716,17 @@ namespace TFE_DarkForces
 			}
 
 			s_prevPlayerTick = s_playerTick;
+#ifdef __ANDROID__
+						tfe_xr_set_eye_drop(fixed16ToFloat(PLAYER_HEIGHT - s_playerObject->worldHeight));
+			tfe_xr_set_gasmask(s_wearingGasmask ? 1 : 0);
+			{
+				// Weapons the player has, for the VR weapon wheel (bit = WeaponID).
+				const PlayerInfo& pi = s_playerInfo;
+				const int mask = 1 | (pi.itemPistol ? 2 : 0) | (pi.itemRifle ? 4 : 0) | (pi.ammoDetonator > 0 ? 8 : 0) | (pi.itemAutogun ? 16 : 0)
+					| (pi.itemFusion ? 32 : 0) | (pi.itemMortar ? 64 : 0) | (pi.ammoMine > 0 ? 128 : 0) | (pi.itemConcussion ? 256 : 0) | (pi.itemCannon ? 512 : 0);
+				tfe_xr_set_owned_weapons(mask);
+			}
+#endif
 			task_yield(TASK_NO_DELAY);
 		}
 		task_end;
@@ -1745,6 +1760,10 @@ namespace TFE_DarkForces
 
 		s32 mdx, mdy;
 		TFE_Input::getAccumulatedMouseMove(&mdx, &mdy);
+#ifdef __ANDROID__
+		// VR: the mouse moves the cursor on the mission tablet; it must not turn or tilt the player.
+		if (tfe_xr_active() && pda_isOpen()) { mdx = 0; mdy = 0; }
+#endif
 		InputConfig* inputConfig = TFE_Input::inputMapping_get();
 
 		// Yaw change
@@ -1753,6 +1772,14 @@ namespace TFE_DarkForces
 			s_playerYaw += s32(f32(mdx * PLAYER_MOUSE_TURN_SPD) * inputMapping_getHorzMouseSensitivity());
 			s_playerYaw &= ANGLE_MASK;
 		}
+#ifdef __ANDROID__
+		// VR snap turn.
+		if (!s_disablePlayerRotation)
+		{
+			s_playerYaw += tfe_xr_take_yaw();
+			s_playerYaw &= ANGLE_MASK;
+		}
+#endif
 		// Pitch change
 		if (inputConfig->mouseMode == MMODE_LOOK)
 		{
@@ -1789,7 +1816,7 @@ namespace TFE_DarkForces
 			}
 		}
 
-		if (settings->df_autorun) // TFE: Optional feature.
+		if (settings->df_autorun) // TFE: Optional feature. (VR: run is a button, walking is the default)
 		{
 			s_playerRun = 1;
 			if (inputMapping_getActionState(IADF_RUN))
@@ -1978,6 +2005,11 @@ namespace TFE_DarkForces
 		{
 			s_playerSecFire = JTRUE;
 		}
+#ifdef __ANDROID__
+		// VR: the mission tablet stays open while the game runs; its clicks (trigger, A) are not shots
+		// or "use" (walking still works).
+		if (tfe_xr_active() && pda_isOpen()) { s_playerPrimaryFire = JFALSE; s_playerSecFire = JFALSE; s_playerUse = JFALSE; }
+#endif
 
 		// Reduce the players ability to adjust the velocity while they have vertical velocity.
 		if (s_playerUpVel && !s_flyMode)
@@ -2715,6 +2747,12 @@ namespace TFE_DarkForces
 		health += s_playerInfo.healthFract;
 
 		s32 applyDmg = s_invincibility ? 0 : 1;
+#ifdef __ANDROID__
+		if (applyDmg && (healthDmg > 0 || shieldDmg > 0))
+		{
+			tfe_xr_on_damage(fixed16ToFloat(healthDmg + shieldDmg) / 20.0f);
+		}
+#endif
 		if (applyDmg && health && shieldDmg >= 0)
 		{
 			if (shieldDmg && s_curTick > s_nextShieldDmgTick && !s_config.superShield)
@@ -2791,8 +2829,14 @@ namespace TFE_DarkForces
 		// Then cast a ray and see if the wall in front of the player is close enough to trigger.
 		fixed16_16 x0 = player->posWS.x;
 		fixed16_16 z0 = player->posWS.z;
-		fixed16_16 x1 = x0 + mul16(FIXED(4), s_playerLogic.dir.x);
-		fixed16_16 z1 = z0 + mul16(FIXED(4), s_playerLogic.dir.z);
+		fixed16_16 dirX = s_playerLogic.dir.x, dirZ = s_playerLogic.dir.z;
+#ifdef __ANDROID__
+		// VR: the player turns the real body too, so "use" reaches where the head faces, not only
+		// where the body (stick turn) faces.
+		if (tfe_xr_active()) { sinCosFixed((player->yaw + tfe_xr_head_yaw_units()) & ANGLE_MASK, &dirX, &dirZ); }
+#endif
+		fixed16_16 x1 = x0 + mul16(FIXED(4), dirX);
+		fixed16_16 z1 = z0 + mul16(FIXED(4), dirZ);
 		RWall* wall = collision_wallCollisionFromPath(sector, x0, z0, x1, z1);
 		if (wall)
 		{
@@ -3498,3 +3542,49 @@ namespace TFE_DarkForces
 		}
 	}
 }  // TFE_DarkForces
+
+#ifdef __ANDROID__
+#include <TFE_Jedi/Collision/collision.h>
+// VR: how far (meters) a point held at "off" from the head (reference frame: x right, y up,
+// z back) is past the nearest solid wall. 0 when the path from the body to it is clear.
+extern "C" float tfe_df_vr_wall_penetration(const float off[3], float margin)
+{
+	using namespace TFE_DarkForces;
+	using namespace TFE_Jedi;
+	if (!s_playerObject || !s_playerObject->sector) { return 0.0f; }
+	const f32 u = tfe_xr_units_per_meter();
+	f32 sn, cs;
+	TFE_Jedi::sinCosFlt(-f32(s_playerObject->yaw), &sn, &cs);
+	const f32 h[3] = { off[0] * u, -off[1] * u, off[2] * u };
+	const f32 o[3] = { cs * h[0] + sn * h[2], h[1], sn * h[0] - cs * h[2] };
+	const f32 len = sqrtf(o[0] * o[0] + o[2] * o[2]);
+	if (len < 0.01f) { return 0.0f; }
+	// Extend the probe by the margin so the barrel stops short of the wall.
+	const f32 ext = (len + margin * u) / len;
+	fixed16_16 x0 = s_playerObject->posWS.x, z0 = s_playerObject->posWS.z;
+	const fixed16_16 x1 = x0 + floatToFixed16(o[0] * ext), z1 = z0 + floatToFixed16(o[2] * ext);
+	const fixed16_16 y = s_playerObject->posWS.y - s_playerObject->worldHeight + floatToFixed16(o[1]);
+	RSector* sector = s_playerObject->sector;
+	f32 travelled = 0.0f;
+	for (s32 step = 0; step < 8 && sector; step++)
+	{
+		RWall* wall = collision_wallCollisionFromPath(sector, x0, z0, x1, z1);
+		if (!wall) { return 0.0f; }   // reaches the end inside this sector
+		fixed16_16 hx, hz;
+		collision_getHitPoint(&hx, &hz);
+		const f32 seg = fixed16ToFloat(collision_getHitDistance());
+		RSector* next = wall->nextSector;
+		const bool passable = next && !(wall->flags3 & WF3_SOLID_WALL) && y < next->floorHeight && y > next->ceilingHeight;
+		if (!passable)
+		{
+			const f32 hit = travelled + seg;
+			const f32 pen = len * ext - hit;
+			return pen > 0.0f ? pen / u : 0.0f;
+		}
+		travelled += seg;
+		x0 = hx; z0 = hz;
+		sector = next;
+	}
+	return 0.0f;
+}
+#endif

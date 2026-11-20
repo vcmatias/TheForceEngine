@@ -1,3 +1,9 @@
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#define TFE_BACKBUFFER_FBO tfe_xr_screen_fbo()
+#else
+#define TFE_BACKBUFFER_FBO 0
+#endif
 #include "renderTarget.h"
 #include <TFE_RenderBackend/renderState.h>
 #include <TFE_RenderBackend/renderBackend.h>
@@ -69,7 +75,7 @@ bool RenderTarget::create(s32 textureCount, TextureGpu** textures, bool depthBuf
 		return false;
 	}
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, TFE_BACKBUFFER_FBO);
 	return true;
 }
 
@@ -121,7 +127,7 @@ void RenderTarget::clear(const f32* color, f32 depth, u8 stencil, bool clearColo
 
 void RenderTarget::unbind()
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, TFE_BACKBUFFER_FBO);
 }
 
 void RenderTarget::copy(RenderTarget* dst, RenderTarget* src)
@@ -133,12 +139,20 @@ void RenderTarget::copy(RenderTarget* dst, RenderTarget* src)
 					  0, 0, dst->getTexture()->getWidth(), dst->getTexture()->getHeight(),	// dst rect
 					  GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, TFE_BACKBUFFER_FBO);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, TFE_BACKBUFFER_FBO);
 }
 
 void RenderTarget::copyBackbufferToTarget(RenderTarget* dst)
 {
+#ifdef __ANDROID__
+	if (TFE_BACKBUFFER_FBO)
+	{
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, TFE_BACKBUFFER_FBO);
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+	}
+	else
+#endif
 	glReadBuffer(GL_BACK);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dst->m_gpuHandle);
 
@@ -149,5 +163,5 @@ void RenderTarget::copyBackbufferToTarget(RenderTarget* dst)
 		0, 0, dst->getTexture()->getWidth(), dst->getTexture()->getHeight(),	// dst rect
 		GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, TFE_BACKBUFFER_FBO);
 }

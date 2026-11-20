@@ -15,6 +15,7 @@
 #include <TFE_DarkForces/Actor/actor.h>
 #include <TFE_DarkForces/GameUI/escapeMenu.h>
 #include <TFE_DarkForces/GameUI/pda.h>
+#include <TFE_DarkForces/GameUI/vrMenu.h>
 #include <TFE_DarkForces/Landru/cutscene.h>
 #include <TFE_Audio/midiPlayer.h>
 #include <TFE_DarkForces/logic.h>
@@ -44,8 +45,14 @@
 using namespace TFE_Jedi;
 using namespace TFE_Input;
 
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#endif
 namespace TFE_DarkForces
 {
+#ifdef __ANDROID__
+	void automap_vrZoom();
+#endif
 	// Show the loading screen for at least 1 second.
 	#define MIN_LOAD_TIME 145
 
@@ -596,7 +603,7 @@ namespace TFE_DarkForces
 			s_prevTickFract = s_curTickFract;
 			s_playerTick = s_curTick;
 
-			if (!escapeMenu_isOpen() && !pda_isOpen() && !cutscene_isPlaying())
+			if (!escapeMenu_isOpen() && !pda_isOpen() && !cutscene_isPlaying() && !vrMenu_isOpen())
 			{
 				player_setupCamera();
 
@@ -619,6 +626,33 @@ namespace TFE_DarkForces
 					handleVisionFx();
 				}
 			}
+#ifdef __ANDROID__
+			else if (tfe_xr_active() && !cutscene_isPlaying() && (escapeMenu_isOpen() || vrMenu_isOpen() || pda_isOpen()) && s_missionMode == MISSION_MODE_MAIN)
+			{
+				// VR pause: the world stays in view (frozen) and the menu is a PDA in the left hand.
+				// 2 = mission PDA, 1 = menus on the configuration frame, 3 = frameless pages (escape menu, controls help)
+				tfe_xr_set_pause_pda(pda_isOpen() ? 2 : ((escapeMenu_isOpen() || vrMenu_isFrameless()) ? 3 : 1));
+				if (!pda_isOpen()) { pda_vrReportCanvas(); }   // the menus use the same 320x200 canvas (the mission tablet reports its own)
+				if (escapeMenu_isOpen() && s_playerEye)
+				{
+					player_setupCamera();
+					updateScreensize();
+					drawWorld(s_framebuffer, s_playerEye->sector, s_levelColorMap, s_lightSourceRamp);
+				}
+				else if (pda_isOpen() && s_playerEye)
+				{
+					// Mission PDA: the world keeps running and is drawn live into the eyes (GPU renderer, level
+					// palette); the tablet itself is composed on the CPU by pda_update and handed to the XR side.
+					player_setupCamera();
+					updateLevelScript(fixed16ToFloat(s_deltaTime));
+					updateScreensize();
+					drawWorld(s_framebuffer, s_playerEye->sector, s_levelColorMap, s_lightSourceRamp);
+					weapon_draw(s_framebuffer, (DrawRect*)vfb_getScreenRect(VFB_RECT_UI));
+					handleVisionFx();
+					handlePaletteFx();
+				}
+			}
+#endif
 			else if (cutscene_isPlaying())
 			{
 				// Takes over rendering/audio entirely (including its own
@@ -639,9 +673,12 @@ namespace TFE_DarkForces
 				}
 			}
 
-			if (!escapeMenu_isOpen() && !pda_isOpen() && !cutscene_isPlaying())
+			if (!escapeMenu_isOpen() && !pda_isOpen() && !cutscene_isPlaying() && !vrMenu_isOpen())
 			{
 				handleGeneralInput();
+#ifdef __ANDROID__
+				tfe_xr_set_automap(s_drawAutomap ? 1 : 0);
+#endif
 				if (s_drawAutomap)
 				{
 					automap_draw(s_framebuffer);
@@ -662,7 +699,13 @@ namespace TFE_DarkForces
 			if (escapeMenu_isOpen() && !cutscene_isPlaying())
 			{
 				EscapeMenuAction action = escapeMenu_update();
-				if (action == ESC_RETURN || action == ESC_CONFIG)
+				if (action == ESC_CONFIG && tfe_xr_active())
+				{
+					// VR: the original Dark Forces configuration screen (game, VR and controls pages).
+					// The game stays paused until it closes.
+					vrMenu_open();
+				}
+				else if (action == ESC_RETURN || action == ESC_CONFIG)
 				{
 					s_gamePaused = JFALSE;
 					TFE_Input::clearAccumulatedMouseMove();
@@ -695,6 +738,19 @@ namespace TFE_DarkForces
 					}
 				}
 			}
+			else if (vrMenu_isOpen())
+			{
+				const JBool systemMenu = vrMenu_update();
+				if (!vrMenu_isOpen())
+				{
+					s_gamePaused = JFALSE;
+					TFE_Input::clearAccumulatedMouseMove();
+					task_pause(s_gamePaused);
+					time_pause(s_gamePaused);
+					if (systemMenu) { TFE_System::postSystemUiRequest(); }
+					blankScreen();
+				}
+			}
 			else if (pda_isOpen())
 			{
 				pda_update();
@@ -702,8 +758,13 @@ namespace TFE_DarkForces
 				// If the PDA was closed, then unpause the game.
 				if (!pda_isOpen())
 				{
+#ifdef __ANDROID__
+					if (!tfe_xr_active()) { mission_pause(JFALSE); resumeLevelSound(); }
+					else { setPalette(s_framePalette); }   // VR: the game never paused; level colors back
+#else
 					mission_pause(JFALSE);
 					resumeLevelSound();
+#endif
 				}
 			}
 			else if (inputMapping_getActionState(IADF_MENU_TOGGLE) == STATE_PRESSED && !s_playerDying && !TFE_FrontEndUI::isConsoleOpen())
@@ -1379,6 +1440,13 @@ namespace TFE_DarkForces
 		if (!s_gamePaused)
 		{
 			handleBufferedInput();
+#ifdef __ANDROID__
+			{
+				// Test hook: scripted cheats from the XR input script.
+				const s32 vrCheat = tfe_xr_take_cheat();
+				if (vrCheat > 0) { s_queuedCheatID = CheatID(vrCheat); }
+			}
+#endif
 			if (s_queuedCheatID != CHEAT_NONE)
 			{
 				executeCheat(s_queuedCheatID);
@@ -1391,7 +1459,19 @@ namespace TFE_DarkForces
 				// Clear out the PDA_TOGGLE state for this frame since it will be read again later.
 				inputMapping_removeState(IADF_PDA_TOGGLE);
 
+#ifdef __ANDROID__
+				// VR: the mission PDA is a tablet in the left hand and the game keeps running behind it.
+				if (!tfe_xr_active()) { mission_pause(JTRUE); }
+				else if (s_drawAutomap)
+				{
+					// VR: the tablet replaces the map hologram (both would share the 2D screen).
+					s_drawAutomap = JFALSE;
+					tfe_xr_set_automap(0);
+					reticle_enable(true);
+				}
+#else
 				mission_pause(JTRUE);
+#endif
 				pda_start(agent_getLevelName());
 			}
 			if (inputMapping_getActionState(IADF_NIGHT_VISION_TOG) == STATE_PRESSED && s_playerInfo.itemGoggles)
@@ -1509,6 +1589,9 @@ namespace TFE_DarkForces
 					automap_updateMapData(MAP_ENABLE_AUTOCENTER);
 					automap_updateMapData(MAP_CENTER_PLAYER);
 					s_canTeleport = JTRUE;
+#ifdef __ANDROID__
+					if (tfe_xr_active()) { automap_vrZoom(); automap_computeScreenBounds(); }
+#endif
 					reticle_enable(false);
 				}
 				else

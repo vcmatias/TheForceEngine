@@ -1,0 +1,12 @@
+bar 4: MISSÃO II
+bar 16: TALAY: BASE TAK
+bar 28: DEPOIS DO MASSACRE
+bar 107: CONTEXTO
+bar 315: MISSÃO
+bar 444: OBJETIVOS DA MISSÃO:
+p0: É bom ver você, Kyle. Belo trabalho na Operação Skyhook, os rebeldes ficaram muito impressionados. Agora é hora de voltar a pular de missão em missão, como nos velhos tempos.
+p1: O Comando Rebelde fez um breve reconhecimento da área e ela está fervilhando de atividade imperial. A energia da cidade continua cortada, então alguns sistemas também estarão fora do ar. Você vai precisar encontrar o gerador hidrelétrico principal e religá-lo.
+p2: O Império costuma ficar desleixado depois de uma grande ofensiva, então talvez possamos encontrar provas ou pistas sobre esse novo "Dark Trooper" de que ouvimos falar por meio de Crix Madine. Os contatos dele dentro do Império vão nos ajudar a seguir qualquer coisa que você encontrar. Boa caçada, Kyle.
+p3: - Encontrar e religar o gerador hidrelétrico.
+p4: - Encontrar alguma pista sobre o Dark Trooper.
+p5: - Voltar para a área de pouso.

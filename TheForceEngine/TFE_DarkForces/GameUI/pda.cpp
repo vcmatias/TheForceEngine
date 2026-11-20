@@ -30,6 +30,9 @@
 #include <TFE_Jedi/Renderer/jediRenderer.h>
 #include <TFE_Settings/settings.h>
 #include <TFE_Input/replay.h>
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#endif
 #include <TFE_Input/inputMapping.h>
 
 using namespace TFE_Jedi;
@@ -90,6 +93,9 @@ namespace TFE_DarkForces
 	static LActor* s_weapons = nullptr;
 	static LActor* s_items   = nullptr;
 	static LPalette* s_palette = nullptr;
+#ifdef __ANDROID__
+	static u8 s_vrCanvas[320 * 200];   // VR: the tablet composed on the CPU
+#endif
 	static LRect s_pdaRect   = { 12, 15, 168, 305 };
 	static LRect s_viewBounds;
 	static LRect s_overlayRect;
@@ -128,7 +134,11 @@ namespace TFE_DarkForces
 		reticle_enable(false);
 		s_mouseAccum = { 0 };
 		mouseOldPosX = 0, mouseOldPosZ = 0;
+#ifdef __ANDROID__
+		if (!tfe_xr_active()) { pauseLevelSound(); }   // VR: the game keeps running (and sounding) behind the tablet
+#else
 		pauseLevelSound();
+#endif
 		if (!s_pdaLoaded)
 		{
 			if (!menu_openResourceArchive("dfbrief.lfd"))
@@ -180,7 +190,13 @@ namespace TFE_DarkForces
 
 			s_pdaLoaded = JTRUE;
 		}
+#ifdef __ANDROID__
+		// VR: the screen palette stays the level's (the world is live behind the tablet); the tablet
+		// image is converted with the PDA palette on its own.
+		if (!tfe_xr_active()) { lpalette_setScreenPal(s_palette); }
+#else
 		lpalette_setScreenPal(s_palette);
+#endif
 
 		s_pdaOpen = JTRUE;
 		s_buttonPressed = -1;
@@ -188,7 +204,12 @@ namespace TFE_DarkForces
 		s_buttonHover = JFALSE;
 		automap_updateMapData(MAP_CENTER_PLAYER);
 		automap_updateMapData(MAP_ENABLE_AUTOCENTER);
+#ifdef __ANDROID__
+		if (tfe_xr_active()) { vfb_vrPushCanvas320(s_vrCanvas); automap_resetScale(); vfb_vrPopCanvas(); }
+		else { automap_resetScale(); }
+#else
 		automap_resetScale();
+#endif
 		ltime_setFrameDelay(10);
 
 		TFE_Input::endFrame();
@@ -238,7 +259,12 @@ namespace TFE_DarkForces
 	void pda_close()
 	{
 		// Clear the screen to black during the palette transition.
+#ifdef __ANDROID__
+		if (!tfe_xr_active()) { pda_clearToBlack(); }
+		else { automap_resetScale(); }   // VR: back to the scale of the in-game map (screen resolution)
+#else
 		pda_clearToBlack();
+#endif
 
 		// Reset automap
 		automap_updateMapData(MAP_ENABLE_AUTOCENTER);
@@ -272,15 +298,25 @@ namespace TFE_DarkForces
 			pda_close();
 			return;
 		}
+#ifdef __ANDROID__
+		else if (TFE_Jedi::renderer_getType() != RENDERER_SOFTWARE && !tfe_xr_active())
+#else
 		else if (TFE_Jedi::renderer_getType() != RENDERER_SOFTWARE)
+#endif
 		{
-			// Convert back to CPU rendering.
+			// Convert back to CPU rendering (VR keeps the GPU renderer: the world is drawn live behind the tablet).
 			TFE_Jedi::renderer_setType(RENDERER_SOFTWARE);
 			TFE_Jedi::renderer_setLimits();
 		}
 		
 		tfe_updateLTime();
 		s_frameReady = ltime_isFrameReady();
+#ifdef __ANDROID__
+		// VR: compose the tablet on the CPU in a private 320x200 canvas (the GPU renderer stays on).
+		const bool vrCanvas = tfe_xr_active() != 0;
+		bool vrGpu = false;
+		if (vrCanvas) { vrGpu = screen_isGPUEnabled(); screen_enableGPU(false); vfb_vrPushCanvas320(s_vrCanvas); }
+#endif
 
 		// Input
 		pda_handleInput();
@@ -332,11 +368,47 @@ namespace TFE_DarkForces
 		// show up incorrectly.
 		screenDraw_setTransColor(0);
 		menu_blitCursorScaled(s_cursorPos.x, s_cursorPos.z, vfb_getCpuBuffer());
+#ifdef __ANDROID__
+		if (vrCanvas)
+		{
+			static u32 s_rgba[320 * 200];
+			u32 pal[256];
+			lpalette_vrBuildRgba(s_palette, pal);
+			for (s32 i = 0; i < 320 * 200; i++) { s_rgba[i] = pal[s_vrCanvas[i]]; }
+			vfb_vrPopCanvas();
+			screen_enableGPU(vrGpu);
+			tfe_xr_set_pda_image((const unsigned char*)s_rgba);
+			return;
+		}
+		pda_vrReportCanvas();
+#endif
 		vfb_swap();
 	}
 	
+#ifdef __ANDROID__
+	// VR: the PDA's menu palette for the 2D screen (the world was just drawn with the level palette).
+	void pda_vrScreenPalette() { if (s_palette) { lpalette_setScreenPal(s_palette); } }
+
+	// VR: where the 320x200 canvas lands in the screen (same math as menu_blitToScreen), so the tablet
+	// can copy the frame onto its case and show just the window in its screen layer.
+	void pda_vrReportCanvas()
+	{
+		if (!tfe_xr_active()) { return; }
+		u32 w, h;
+		vfb_getResolution(&w, &h);
+		if (w == 320 && h == 200) { tfe_xr_set_pda_canvas(0.0f, 0.0f, 1.0f, 1.0f); return; }
+		ScreenRect* uiRect = vfb_getScreenRect(VFB_RECT_UI);
+		const s32 virtualWidth = floor16(mul16(intToFixed16(320), vfb_getXScale()));
+		const s32 virtualHeight = floor16(mul16(intToFixed16(200), vfb_getYScale()));
+		const s32 offset = max(0, ((uiRect->right - uiRect->left + 1) - virtualWidth) / 2);
+		const f32 x0 = f32(uiRect->left + offset) / f32(w), y0 = f32(uiRect->top) / f32(h);
+		tfe_xr_set_pda_canvas(x0, y0, x0 + f32(virtualWidth) / f32(w), y0 + f32(virtualHeight) / f32(h));
+	}
+#endif
+
 	///////////////////////////////////////////
 	// Internal Implementation
+
 	///////////////////////////////////////////
 	void pda_handleMouseAccum(s32* wdx, s32* wdy)
 	{

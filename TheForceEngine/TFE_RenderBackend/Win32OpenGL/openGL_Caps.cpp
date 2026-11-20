@@ -41,7 +41,12 @@ namespace OpenGL_Caps
 
 		bool isMacOS = (strcmp(SDL_GetPlatform(), "Mac OS X") == 0);
 
-		if (isMacOS && gl_maj >= 4) {
+#ifdef __ANDROID__
+		const bool isGLES = true;
+#else
+		const bool isGLES = false;
+#endif
+		if ((isMacOS && gl_maj >= 4) || isGLES) {
 			m_supportFlags = CAP_PBO | CAP_VBO | CAP_FBO | CAP_UBO | CAP_NON_POW_2 | CAP_TEXTURE_ARRAY;
 
 			if (SDL_GL_ExtensionSupported("GL_EXT_texture_filter_anisotropic")) {

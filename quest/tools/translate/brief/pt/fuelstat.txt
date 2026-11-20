@@ -1,0 +1,10 @@
+bar 4: MISSÃO XII
+bar 16: POSTO IMPERIAL DE COMBUSTÍVEL ERGO
+bar 28: O SEQUESTRO DO CONTRABANDISTA
+bar 48: CONTEXTO
+bar 289: MISSÃO
+bar 490: OBJETIVOS DA MISSÃO:
+p0: Com as fitas de dados de navegação, consegui rastrear a rota da próxima nave de carga dos contrabandistas. Essa rota leva ao super destróier estelar Executor. Descobrimos que, por segurança, o Arc Hammer faz saltos periódicos pela galáxia, sempre escondendo a sua localização. A única nave que conhece essas localizações é o Executor. A nave de carga dos contrabandistas vai se encontrar com o Executor, que então vai saltar para o hiperespaço até o Arc Hammer.
+p1: Para chegar ao Arc Hammer, sequestre a nave dos contrabandistas antes do encontro com o Executor. A nave vai ser um alvo fácil enquanto abastece no Posto de Combustível Ergo. Sequestre a nave e, disfarçado de contrabandista, vá ao encontro do Executor. Lá, entre escondido no Executor e espere o encontro dele com o Arc Hammer. No resto da missão eu não vou poder dar cobertura, então tome cuidado. Volte inteiro. A Rebelião ficaria muito solitária sem você para nos dar preocupação.
+p2: - Embarcar na nave dos contrabandistas.
+p3: - Sequestrar a nave dos contrabandistas.

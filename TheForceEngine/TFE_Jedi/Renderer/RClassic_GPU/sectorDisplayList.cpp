@@ -1,4 +1,8 @@
 #include <cstring>
+#include <cmath>
+#ifdef __ANDROID__
+extern "C" int tfe_xr_active(void);
+#endif
 
 #include <TFE_System/profiler.h>
 #include <TFE_System/math.h>

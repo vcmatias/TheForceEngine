@@ -25,6 +25,7 @@ enum ModelFlags
 {
 	MFLAG_VERTEX_LIT = (1 << 1),
 	MFLAG_DRAW_VERTICES = (1 << 2),
+	MFLAG_VOXEL = (1 << 8),          // TFE VR: built from a voxel model (one quad per polygon, unit normals)
 };
 
 struct vec2

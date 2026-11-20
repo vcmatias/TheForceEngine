@@ -61,7 +61,11 @@ void main()
 	for (int i = 0; i < int(portalCount) && i < 8; i++)
 	{
 		vec4 plane = texelFetch(DrawListPlanes, int(portalOffset) + i);
+		#ifdef VR_CLIP_SLACK
+		gl_ClipDistance[i] = dot(vec4(vtx_pos.xyz, 1.0), plane) + VR_CLIP_SLACK;
+#else
 		gl_ClipDistance[i] = dot(vec4(vtx_pos.xyz, 1.0), plane);
+#endif
 	}
 	for (int i = int(portalCount); i < 8; i++)
 	{

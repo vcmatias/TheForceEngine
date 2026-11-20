@@ -12,6 +12,9 @@
 #include <TFE_Jedi/Serialization/serialization.h>
 #include <TFE_ExternalData/weaponExternal.h>
 
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#endif
 namespace TFE_DarkForces
 {
 	///////////////////////////////////////////
@@ -200,6 +203,11 @@ namespace TFE_DarkForces
 		s_playerWeaponList[id].u90 = 0;
 		s_playerWeaponList[id].wakeupRange = FIXED(extWeapons[id].wakeupRange);
 		s_playerWeaponList[id].variation = extWeapons[id].variation;
+#ifdef __ANDROID__
+		// VR: the original random spread by default (option "weapon_spread"); reduced to a third
+		// when the player prefers a precise barrel aim.
+		if (tfe_xr_active() && !tfe_xr_options()->weaponSpread) { s_playerWeaponList[id].variation = extWeapons[id].variation / 3; }
+#endif
 		s_playerWeaponList[id].primaryFireConsumption = extWeapons[id].primaryFireConsumption;
 		s_playerWeaponList[id].secondaryFireConsumption = extWeapons[id].secondaryFireConsumption;
 		s_playerWeaponList[id].primaryProjectile = (ProjectileType)extWeapons[id].primaryProjectile;
@@ -987,6 +995,12 @@ namespace TFE_DarkForces
 		task_end;
 	}
 
+#ifdef __ANDROID__
+	s32 weapon_vrCurrentId()
+	{
+		return s_curPlayerWeapon ? s32(s_curPlayerWeapon - s_playerWeaponList) : 1;
+	}
+#endif
 	// In DOS, this was part of drawWorld() - 
 	// for TFE I split it out to limit the amount of game code in the renderer.
 	void weapon_draw(u8* display, DrawRect* rect)
@@ -1001,6 +1015,25 @@ namespace TFE_DarkForces
 		const fixed16_16 gasmaskLightingZDist = FIXED(2);
 
 		PlayerWeapon* weapon = s_curPlayerWeapon;
+#ifdef __ANDROID__
+		if (tfe_xr_active())
+		{
+			// VR: the weapon is a 3D model in the right hand; only report its state.
+			const s32 id = weapon ? s32(weapon - s_playerWeaponList) : -1;
+			const JBool empty = weapon && weapon->ammo && *weapon->ammo == 0 &&
+				(weapon->ammo == &s_playerInfo.ammoDetonator || weapon->ammo == &s_playerInfo.ammoMine);
+			tfe_xr_set_weapon(id, (weapon && !s_weaponOffAnim) ? 1 : 0, empty ? 1 : 0);
+			f32 ambient = 1.0f;
+			if (s_playerObject && s_playerObject->sector)
+			{
+				ambient = fixed16ToFloat(s_playerObject->sector->ambient) / 31.0f;
+				if (ambient > 1.0f) ambient = 1.0f;
+				if (ambient < 0.0f) ambient = 0.0f;
+			}
+			tfe_xr_set_light(ambient, f32(s_weaponLight) / 31.0f, s_headlampActive ? 1 : 0);
+			weapon = nullptr;
+		}
+#endif
 		if (weapon && !s_weaponOffAnim)
 		{
 			s32 x = weapon->xPos[weapon->frame];
@@ -1075,7 +1108,12 @@ namespace TFE_DarkForces
 			}
 		}
 
+#ifdef __ANDROID__
+		// VR: the gas mask is a 3D frame around the view (tfe_xr_mask.cpp), never the flat overlay.
+		if (s_wearingGasmask && !tfe_xr_active())
+#else
 		if (s_wearingGasmask)
+#endif
 		{
 			s32 x = s_gasMaskXpos;
 			s32 y = s_gasMaskYpos;

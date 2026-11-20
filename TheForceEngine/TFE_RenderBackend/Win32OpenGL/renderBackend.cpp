@@ -1,3 +1,8 @@
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+static const int c_vrScreenWidth = 1280;
+static const int c_vrScreenHeight = 800;
+#endif
 #include <TFE_RenderBackend/renderBackend.h>
 #include <TFE_RenderBackend/dynamicTexture.h>
 #include <TFE_RenderBackend/textureGpu.h>
@@ -180,6 +185,21 @@ namespace TFE_RenderBackend
 		return (SDL_GetWindowFlags(s_window) & SDL_WINDOW_MINIMIZED) != 0;
 	}
 
+#ifdef __ANDROID__
+	static void GLAD_API_PTR tfe_clearDepth(GLdouble d) { glClearDepthf((GLfloat)d); }
+	static void GLAD_API_PTR tfe_depthRange(GLdouble n, GLdouble f) { glDepthRangef((GLfloat)n, (GLfloat)f); }
+	static void GLAD_API_PTR tfe_polygonMode(GLenum, GLenum) {}
+	static void GLAD_API_PTR tfe_getTexImage(GLenum, GLint, GLenum, GLenum, void*) {}
+	static void tfe_gles_fixup()
+	{
+		glad_glClearDepthf = (PFNGLCLEARDEPTHFPROC)SDL_GL_GetProcAddress("glClearDepthf");
+		glad_glDepthRangef = (PFNGLDEPTHRANGEFPROC)SDL_GL_GetProcAddress("glDepthRangef");
+		glad_glClearDepth = tfe_clearDepth;
+		glad_glDepthRange = tfe_depthRange;
+		glad_glPolygonMode = tfe_polygonMode;
+		glad_glGetTexImage = tfe_getTexImage;
+	}
+#endif
 	SDL_Window* createWindow(const WindowState& state)
 	{
 		u32 windowFlags = SDL_WINDOW_OPENGL;
@@ -209,6 +229,14 @@ namespace TFE_RenderBackend
 		}
 
 		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, true);
+#ifdef __ANDROID__
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+		windowFlags |= SDL_WINDOW_FULLSCREEN;
+#endif
 
 		if (s_isMacOS) {
 			// macOS specific OpenGL context setup
@@ -244,6 +272,9 @@ namespace TFE_RenderBackend
 			return nullptr;
 		}
 
+#ifdef __ANDROID__
+		tfe_gles_fixup();
+#endif
 		OpenGL_Caps::queryCapabilities();
 		printGLInfo();
 		int tier = OpenGL_Caps::getDeviceTier();
@@ -297,7 +328,26 @@ namespace TFE_RenderBackend
 		SDL_SetWindowFullscreen(window, windowed ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
 #endif
 
+#ifdef __ANDROID__
+		uiScale = 100;
+#endif
 		TFE_Ui::init(window, context, uiScale);
+#ifdef __ANDROID__
+		{
+			const s32 dw = c_vrScreenWidth, dh = c_vrScreenHeight;
+			if (tfe_xr_init(dw, dh))
+			{
+				TFE_System::logWrite(LOG_MSG, "RenderBackend", "OpenXR active, screen %dx%d", dw, dh);
+				SDL_GL_SetSwapInterval(0);
+				TFE_Settings::getGraphicsSettings()->frameRateLimit = 0;
+				TFE_Settings::getGameSettings()->df_enableAutoaim = false;
+			}
+			else
+			{
+				TFE_System::logWrite(LOG_ERROR, "RenderBackend", "OpenXR not available, running flat.");
+			}
+		}
+#endif
 		return window;
 	}
 
@@ -305,6 +355,9 @@ namespace TFE_RenderBackend
 	{
 		m_window = createWindow(state);
 		m_windowState = state;
+#ifdef __ANDROID__
+		if (tfe_xr_active()) { m_windowState.width = c_vrScreenWidth; m_windowState.height = c_vrScreenHeight; }
+#endif
 		if (!m_window)
 			return false;
 
@@ -438,6 +491,14 @@ namespace TFE_RenderBackend
 
 		TFE_ZONE_BEGIN(swapGpu, "GPU Swap Buffers");
 		// Update the window.
+#ifdef __ANDROID__
+		if (tfe_xr_active())
+		{
+			tfe_xr_end_frame();
+			TFE_RenderState::clear();
+		}
+		else
+#endif
 		SDL_GL_SwapWindow((SDL_Window*)m_window);
 		TFE_ZONE_END(swapGpu);
 
@@ -481,6 +542,10 @@ namespace TFE_RenderBackend
 
 	void resize(s32 width, s32 height)
 	{
+#ifdef __ANDROID__
+		// In VR the "window" is the fixed-size screen quad.
+		if (tfe_xr_active()) { width = c_vrScreenWidth; height = c_vrScreenHeight; }
+#endif
 		TFE_Settings_Window* windowSettings = TFE_Settings::getWindowSettings();
 
 		m_windowState.width = width;

@@ -1,5 +1,6 @@
 #include <TFE_Ui/ui.h>
 #include <TFE_FileSystem/paths.h>
+#include <TFE_System/system.h>
 #include <TFE_FileSystem/fileutil.h>
 
 #include "imGUI/imgui.h"
@@ -8,6 +9,10 @@
 #include "portable-file-dialogs.h"
 #include "markdown.h"
 #include <SDL.h>
+#include <TFE_RenderBackend/renderBackend.h>
+#ifdef __ANDROID__
+#include <tfe_xr.h>
+#endif
 
 namespace TFE_Ui
 {
@@ -17,7 +22,11 @@ static bool s_guiFrameActive;
 
 bool init(void* window, void* context, s32 uiScale)
 {
+#ifdef __ANDROID__
+	glsl_version = "#version 300 es";
+#else
 	glsl_version = strcmp(SDL_GetPlatform(), "Mac OS X") == 0 ? "#version 410" : "#version 130";
+#endif
 	
 	s_uiScale = uiScale;
 
@@ -83,6 +92,15 @@ s32 getUiScale()
 void setUiInput(const void* inputEvent)
 {
 	const SDL_Event* sdlEvent = (SDL_Event*)inputEvent;
+#ifdef __ANDROID__
+	// VR: only the controller ray drives the UI pointer (the Android surface also reports its own pointer).
+	if (tfe_xr_active())
+	{
+		if (sdlEvent->type == SDL_MOUSEMOTION && sdlEvent->motion.which != TFE_XR_MOUSE_ID) { return; }
+		if ((sdlEvent->type == SDL_MOUSEBUTTONDOWN || sdlEvent->type == SDL_MOUSEBUTTONUP) && sdlEvent->button.which != TFE_XR_MOUSE_ID) { return; }
+		if (sdlEvent->type == SDL_FINGERDOWN || sdlEvent->type == SDL_FINGERUP || sdlEvent->type == SDL_FINGERMOTION) { return; }
+	}
+#endif
 	ImGui_ImplSDL2_ProcessEvent(sdlEvent);
 }
 
@@ -90,7 +108,31 @@ void begin()
 {
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplSDL2_NewFrame();
+#ifdef __ANDROID__
+	// VR: the UI is drawn into the virtual screen texture, not the Android window.
+	if (tfe_xr_active())
+	{
+		DisplayInfo info;
+		TFE_RenderBackend::getDisplayInfo(&info);
+		ImGuiIO& io = ImGui::GetIO();
+		io.DisplaySize = ImVec2((float)info.width, (float)info.height);
+		io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+	}
+#endif
 	ImGui::NewFrame();
+#ifdef __ANDROID__
+	if (tfe_xr_active())
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		static bool s_lastDown = false;
+		if (io.MouseDown[0] != s_lastDown)
+		{
+			s_lastDown = io.MouseDown[0];
+			TFE_System::logWrite(LOG_MSG, "VRUi", "mouse %s at %.0f,%.0f display %.0fx%.0f hoverWin=%d", s_lastDown ? "down" : "up",
+				io.MousePos.x, io.MousePos.y, io.DisplaySize.x, io.DisplaySize.y, ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) ? 1 : 0);
+		}
+	}
+#endif
 	s_guiFrameActive = true; // No way to check if we're inside a frame using ImGui's APIs?
 }
 
