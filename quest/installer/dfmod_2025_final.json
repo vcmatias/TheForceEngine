@@ -1,0 +1,253 @@
+{
+ "mod": "Dark Forces Mod Remastered, DFmod 2025 Final (DFmod_2025_Final.zip)",
+ "registration": {
+  "1": {
+   "s": 1.0230484232542072,
+   "R": [
+    [
+     -0.0010375511085983545,
+     -0.999982432993752,
+     -0.005835853972736846
+    ],
+    [
+     0.9971209634887641,
+     -0.0005920706191061585,
+     -0.07582501977329552
+    ],
+    [
+     0.07582023251702467,
+     -0.005897724669400302,
+     0.9971040613620966
+    ]
+   ],
+   "t": [
+    6.872726146594701,
+    -2.75646503504751,
+    -6.738449526730541
+   ]
+  },
+  "2": {
+   "s": 1.1093910520735912,
+   "R": [
+    [
+     0.037080943470078315,
+     -0.9992430645892888,
+     0.01176016588209383
+    ],
+    [
+     0.9959201849979676,
+     0.035983701352366476,
+     -0.08275360022740828
+    ],
+    [
+     0.0822677868000767,
+     0.014780768152879764,
+     0.9965006473393927
+    ]
+   ],
+   "t": [
+    7.904904443173491,
+    -2.3162702024014945,
+    -8.67928243978219
+   ]
+  },
+  "4": {
+   "s": 0.7849252994411495,
+   "R": [
+    [
+     -0.15200238810892158,
+     -0.9807617398398879,
+     0.12248136052241339
+    ],
+    [
+     0.980010607520369,
+     -0.16564620108300593,
+     -0.11018414229972504
+    ],
+    [
+     0.12835296317866,
+     0.10328477977420025,
+     0.9863355266390097
+    ]
+   ],
+   "t": [
+    4.6311479443548365,
+    -3.077335003881808,
+    -5.884545849747729
+   ]
+  },
+  "5": {
+   "s": 0.9888650555509253,
+   "R": [
+    [
+     -0.0002601859019345219,
+     -0.9998397130947895,
+     0.01790196698203424
+    ],
+    [
+     0.9961626257770096,
+     -0.0018259471573516116,
+     -0.08750250808995298
+    ],
+    [
+     0.08752117062945494,
+     0.017810503516407724,
+     0.9960034290383453
+    ]
+   ],
+   "t": [
+    4.410584887004551,
+    -3.5317836359951698,
+    -6.102808376761226
+   ]
+  },
+  "6": {
+   "s": 1.0488008118967889,
+   "R": [
+    [
+     0.0446345170406935,
+     -0.998323148035584,
+     0.03685989670178218
+    ],
+    [
+     0.998868297964771,
+     0.04520484108882637,
+     0.014786671805904428
+    ],
+    [
+     -0.01642812251919418,
+     0.03615818632697099,
+     0.9992110399470367
+    ]
+   ],
+   "t": [
+    4.105986396371785,
+    -2.4162448231664393,
+    -11.156882523525766
+   ]
+  },
+  "8": {
+   "s": 0.8369564153889429,
+   "R": [
+    [
+     -0.03311353064357787,
+     -0.9994512692513032,
+     -0.0008089995533893319
+    ],
+    [
+     0.9993990513070258,
+     -0.03310347880186266,
+     -0.010280852972050628
+    ],
+    [
+     0.01024843085233527,
+     -0.0011489487260970337,
+     0.9999468233770682
+    ]
+   ],
+   "t": [
+    8.34121113216931,
+    -4.202404209668256,
+    -9.497785741811308
+   ]
+  },
+  "9": {
+   "s": 0.663506828447234,
+   "R": [
+    [
+     0.013073134349555022,
+     -0.999907359393061,
+     -0.0037902229321621203
+    ],
+    [
+     0.9996680575234437,
+     0.012985658124757968,
+     0.022251908915235475
+    ],
+    [
+     -0.022200628945674407,
+     -0.004079866990958265,
+     0.9997452109211394
+    ]
+   ],
+   "t": [
+    5.775517684600361,
+    -4.7940563383578745,
+    -3.4587517511043533
+   ]
+  }
+ },
+ "inputs": {
+  "briar_pistol/briar_pistol.jpg": "2c3e00e848bc53e0e70dd889e09a046f8c577f715550b9e565c5c8e5e6959bee",
+  "briar_pistol/briar_pistol.md3": "d5648694776d40af0dc544c555f7742b9bbdb55403fe1b61f31fc962a83693bd",
+  "briar_pistol/briar_pistol_hand.md3": "efd9b53300ef6906b647fa9145b9f9ece0a3a6a8daf434ec7e11864b67fcf2ef",
+  "briar_pistol/briar_pistol_spec.jpg": "2eed25f22d8de6d86dc5f0af33112707f9a4c28c626e39677272e688f47cb49d",
+  "briar_pistol/briar_pistol_w.glm": "7eb208458f3a90893e0e352d32fe8d651a0550db3acfb6ab2f140fc3166edb6a",
+  "briar_pistol/forearm.jpg": "7891107694dd80249964e8cd212ccf5fa87a550fd000f54219c3bcb30f59bec1",
+  "blaster_r/blaster.md3": "ece4e1dfb17b66fd10f0c5af09221b1b8d132f283a590139a0a7cc0f47d1c5ba",
+  "blaster_r/blaster_1.md3": "0a7ea99db59aeed9802c6673c9b272e79706e25497a5480d759ebab2eff29aaf",
+  "blaster_r/blaster_2.md3": "0a7ea99db59aeed9802c6673c9b272e79706e25497a5480d759ebab2eff29aaf",
+  "blaster_r/blaster_hand.md3": "76241e90ae3155afaf6a3af5586fb5b96f1606bdd557b07b9f2eb72a9be7d289",
+  "blaster_r/blaster_r.jpg": "4248c2cc6b0aaced5ea72e39aa9a4faaec6ca85987e5e0181a3d203b2efc7134",
+  "blaster_r/blaster_r_spec.jpg": "75a8351e06eca2636c3951e36ab42ace8dfff680df6e18ada5ee742bdd64946e",
+  "blaster_r/blaster_w.glm": "98a9b56c9d1ec070a717d050e64f25fcebfbdb9718333d5513884b8a9719cbde",
+  "blaster_r/blaster_w.jpg": "a2affb0b428a9b10ea56560ae729d88c523fc513dc000b578cc4a0e444dff97a",
+  "blaster_r/forearm.jpg": "7891107694dd80249964e8cd212ccf5fa87a550fd000f54219c3bcb30f59bec1",
+  "blaster_r/forearm_spec.jpg": "cd9f369f5f3e7072a1cc693e8f1d22ec5b7eb218ba3cb09a7bdcd5caae9b8af6",
+  "blaster_r/scope.jpg": "d3d9f703e720a84a9b3c04b346e5adb5091d80bc8a8b4feecf7041cba0b66af4",
+  "blaster_r/scope_spec.jpg": "3d792915786d6c88ee137991a9673d9860eef5535319f1045fbab2eb8721570a",
+  "heavy_repeater/heavy_repeater.jpg": "4c8889eb3bffe4a9799cccc9f7563f3c8acd3a92764a7576521da155818d9d2a",
+  "heavy_repeater/heavy_repeater.md3": "91882bb7c5c20db644e80747cf8cc5bbde18510ba91826bc90e66a0d9ca238c9",
+  "heavy_repeater/heavy_repeater_1.md3": "948347fae8ffbb007813631d6d21d8ece0ff4c316b698b8c328c511cda64db5c",
+  "heavy_repeater/heavy_repeater_barrel.md3": "0f95a71e6aeca0096f570123e87c3178b34e84c2d23f550431cc6061f8aad46a",
+  "heavy_repeater/heavy_repeater_barrel_1.md3": "6330c2d4e66f8e6216da72017038539478d25a0e75f5b3c96c78d55ce87cd646",
+  "heavy_repeater/heavy_repeater_hand.md3": "bf53821e486cf282853cd87dba4fe10871e554fb22238dd7d7a39e2e820db378",
+  "heavy_repeater/heavy_repeater_spec.jpg": "57dce0c400a37c6666325a1f6a5e25b400482c12a0efabf89de96242e4bf3acb",
+  "heavy_repeater/heavy_repeater_w.glm": "42fe6266bb00c374f7100030b9b9344ec6ebc1e41d1084bed5265256b4c56e26",
+  "demp2/demp2.jpg": "0bcdd5cd172dd63ca2cb1fc837a7a8dc18cb7f4ed9fb58044a93564ef4a6a9f1",
+  "demp2/demp2.md3": "093610353fcf62dc787896df8c4645d14498487bb5a7137511dda1b584dac587",
+  "demp2/demp2_1.md3": "d4e40324db1233d429802df26df29bad290f0f2b0c6242694b7d6a403ddba800",
+  "demp2/demp2_2.md3": "59e839fb3aecba8796032f6899d16779b44663b141e78400640b67bbbf4d8ee8",
+  "demp2/demp2_hand.md3": "bf0979f0ff90f87d0eb8474e4550eeb33ee0bc7a0aafc36e887f4d1de53143e2",
+  "demp2/demp2_spec.jpg": "b7b385a674a25aa14f7bf5d1e8a11867e0e375326254db7ee6721eb226e2349d",
+  "demp2/demp2_w.glm": "e032475f978238702e643681e6eec2d271a0aa4f23c52cfc37b8e5b04dfe2ea5",
+  "golan_arms/golan_arms.jpg": "47a58be3ecc1f7d3daaadf1fdbda3666180df36d33f0621c35cec4afd082f481",
+  "golan_arms/golan_arms.md3": "ec4e5058dfdb9990bbe5ec1f264f4a6cbc70b2006f7c17d055210f38025180f2",
+  "golan_arms/golan_arms_1.md3": "0a0ca6defcb9c0dc31c2fb9245927bba2dd52b7fade9db799b937e7366655486",
+  "golan_arms/golan_arms_2.md3": "0a0ca6defcb9c0dc31c2fb9245927bba2dd52b7fade9db799b937e7366655486",
+  "golan_arms/golan_arms_barrel.md3": "056efefda7d04f242455a75d36bf89f44f6169f58f7acddf64f21e333dc284ed",
+  "golan_arms/golan_arms_barrel_1.md3": "056efefda7d04f242455a75d36bf89f44f6169f58f7acddf64f21e333dc284ed",
+  "golan_arms/golan_arms_barrel_2.md3": "056efefda7d04f242455a75d36bf89f44f6169f58f7acddf64f21e333dc284ed",
+  "golan_arms/golan_arms_grill.tga": "2e3aa0398ce7c8fe86dae83d8bebef0f498454852e04bf6af1830c03f17b4933",
+  "golan_arms/golan_arms_hand.md3": "991fb7aca6a5f76b67df19dc8abf9e6b2f33cdf5e05fe903679706372d4f7559",
+  "golan_arms/golan_arms_pu.md3": "f9843e04792dcedd4b1be8e11b1f6f5656d41b3ff7c72141199e19935d1737ba",
+  "golan_arms/golan_arms_spec.jpg": "2364a58b2ea274ebc1caf0fdb57edf51a358b6dc7fca4040ed42f770de6db82d",
+  "golan_arms/golan_arms_w.glm": "7a4b639d621399843ad98f7f76f508493ab155c5733ed363070273073b982d7a",
+  "golan_arms/projectile.md3": "bf7769a498126dd2a72b9135d6efd02a52a17edc04d8ac86c90383e663e5ee34",
+  "golan_arms/projectilemain.jpg": "2f70965e9b6ab7b9cc8b88cf216ff87cb5f2df36b602cae1747bda73cb4b46a1",
+  "golan_arms/projectilemain.md3": "4e091870b9b7bad9831e6cc37942a69fcdad6ca0c6da8dc4ab877d92b2717e2f",
+  "golan_arms/projectilemain_glow.jpg": "760303a417c9c21c3fe506387790aec7bb804a0fc9c1206fe0ca1172b5e62189",
+  "golan_arms/rack.tga": "66065b422cb4fb3e6c211400cc425bcc3bc5faa6bb18301a20f10db9d496d62c",
+  "concussion/c_rifle.md3": "0918488712ffe46d4159785c4009afddd3feff624fd9fbf4f0ab0d151623159e",
+  "concussion/c_rifle_barrel.md3": "73a74b4fcc8658b2540e5fc1edce1f256291aad755fc382d1c827db1fc4fd65f",
+  "concussion/c_rifle_hand.md3": "e55fb6c6f59afb52e9dcc649e4c6860e398a30e265b42c60bf0ddece9377330f",
+  "concussion/c_rifle_w.glm": "e19aeb4fe40cee3a90ead4d14b2666b0bdf80577bc21c8c36b8b97b0b5b2f8ac",
+  "concussion/concussion_rifle_spec.jpg": "14a6bdc5ed3efb2eebc5deef73639d8978d2f3916e5be990cebecd1836612acf",
+  "concussion/power32.png": "5a6c4a1b8197737eddbc83e207dbccda875ab6ced3cae1614d853589b9820af9",
+  "concussion/power38.png": "5d8cbf9afa37ee80eb778ec1be9839e360369c4b79518f6f1cf92bf28bf3f3dc",
+  "concussion/rifle_inview.jpg": "5454133753d54d0a14c89d71c8be1c3a8df2fd9b156abd2472459887cb5267db",
+  "concussion/rifle_w.jpg": "b8fa247a808346cfb7b45453555aec883a67a38c405e891a06e4094fa691876d",
+  "merr_sonn/merr_sonn.md3": "1f92120fa27d752794a39d3366109d7ad4d35b6d3af43ae18b29a11a50fe2889",
+  "merr_sonn/merr_sonn_barrel.md3": "3350363764c05ab763d5d5ae485022806f85c7f15bff5026976f337721404679",
+  "merr_sonn/merr_sonn_hand.md3": "89c339596e5aa7c8f58f1b47e8cc5ec1835679b112115fd942607c614a666b69",
+  "merr_sonn/merr_sonn_inview.jpg": "0f80bd87fa1d8983e46faa9543351b604009047276128ed5d66da8fbd0955759",
+  "merr_sonn/merr_sonn_w.glm": "bbbfcaa6319ba39c2d0806c7b93127aa0fe580f3cd619a0cbb41ad0d109d65ef",
+  "merr_sonn/merr_sonn_w.md3": "7190fcbe2fc6ff86a3108d2fda0a83928df37e61e4d3fc9a2ea6f5a506638945",
+  "merr_sonn/merr_w.jpg": "79b2ffecf752e568923b1d32ec1c4f00787fdf387acd2df732aa9d54a826e5bb",
+  "merr_sonn/projectile.jpg": "dcd01c3de7ae901214ebca4bc1dbe91f9b5203b7490547743b480f1bd299e994",
+  "merr_sonn/projectile.md3": "dc7995d4a4d2ef436e249aeee49c00e9b23165badf1cf1d48dd07bd3f659d667",
+  "merr_sonn/projectile_glow.jpg": "53561a829055f2544e52c09a515871a44f0eb7c9d65975c27993051565e2ac30"
+ },
+ "output_sha256": "ae602612b9b3a0d30a98dc347af4f0923c890a9400f8418fb9ae36440b505f6d",
+ "output_bytes": 54646172
+}

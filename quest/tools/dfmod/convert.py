@@ -6,7 +6,6 @@ import os, sys, struct
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from assemble import assemble
-import hull
 from PIL import Image
 UNIT = 0.026   # meters per game unit
 # DF weapon id -> grip point and muzzle in hand space (x forward, y left, z up), extra scale.
@@ -24,9 +23,10 @@ SPEC = {
 def find_tex(root, shader):
     rel = shader.split('weapons2/')[-1] if 'weapons2/' in shader else shader
     base = os.path.splitext(rel)[0]
-    for e in ('.jpg', '.tga', '.png'):
-        p = os.path.join(root, base + e)
-        if os.path.exists(p): return p
+    for b in (base, base.lower()):          # the installer extracts the mod with lower-case names
+        for e in ('.jpg', '.tga', '.png'):
+            p = os.path.join(root, b + e)
+            if os.path.exists(p): return p
     return None
 def load_tex(root, shader, cache):
     p = find_tex(root, shader)
@@ -66,6 +66,7 @@ def sample_surface(tri_list, cache_by_idx, n_per_m2=2.0e6):
         cols.append(c)
     return np.concatenate(pts), np.concatenate(cols)
 def main(root, out):
+    import hull          # scikit-image; only this converter needs it
     np.random.seed(1)
     cache = {}
     recs = []

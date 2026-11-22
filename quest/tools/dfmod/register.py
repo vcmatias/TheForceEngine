@@ -71,14 +71,17 @@ def register(root, wid, verbose=False, ok=None):
             if best is None or score < best[0]: best = (score, s, R, t)
     if verbose: print(wid, 'fit mean dist %.3f (units)' % best[0], 'scale %.3f' % best[1])
     return best
-if __name__ == '__main__':
-    root = sys.argv[1]
+def run(root, outdir, ids=None, verbose=True):
+    """Registers the world model of every weapon and writes <outdir>/reg<id>.npz."""
     import convert
-    ids = [int(a) for a in sys.argv[2:]] or list(WORLD)
-    for wid in ids:
+    os.makedirs(outdir, exist_ok=True)
+    for wid in (ids or list(WORLD)):
         key, tgt = ('w_exit', 'muzzle') if wid == 6 else ('w_handle', 'grip')
         hs = [np.array(su['verts']) for su in world_surfs(root, wid) if su['name'] == key]
         g = np.array(convert.SPEC[wid][tgt])
         ok = (lambda s, R, t: np.linalg.norm((s * hs[0] @ R.T + t).mean(0) - g) < 5.0) if hs else None
-        b = register(root, wid, True, ok)
-        np.savez('/home/claude/dfmod/comb/reg%d.npz' % wid, s=b[1], R=b[2], t=b[3], score=b[0])
+        b = register(root, wid, verbose, ok)
+        np.savez(os.path.join(outdir, 'reg%d.npz' % wid), s=b[1], R=b[2], t=b[3], score=b[0])
+if __name__ == '__main__':
+    # python3 register.py <mod models/weapons2 folder> <comb dir> [weapon ids]
+    run(sys.argv[1], sys.argv[2], [int(a) for a in sys.argv[3:]] or None)

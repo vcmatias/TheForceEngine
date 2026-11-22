@@ -57,17 +57,17 @@ def split(p, uv):
     idx = [(0, 3, 5), (3, 1, 4), (5, 4, 2), (3, 4, 5)]
     pp = [p[0], p[1], p[2]] + m; uu = [uv[0], uv[1], uv[2]] + mu
     return [(np.array([pp[a], pp[b], pp[c]]), np.array([uu[a], uu[b], uu[c]])) for a, b, c in idx]
-def combine(root, wid, thr=0.30, depth=4):
+def combine(root, wid, regdir, thr=0.30, depth=4, verbose=True):
     np.random.seed(1)
     vs, _ = assemble(root, wid)
     VP, VUV, VTX = tri_records(vs, root)
-    r = np.load('/home/claude/dfmod/comb/reg%d.npz' % wid)
+    r = np.load(os.path.join(regdir, 'reg%d.npz' % wid))
     s, R, t = float(r['s']), r['R'], r['t']
     Vs = surf_samples(VP)
     tree = cKDTree(Vs)
     log = []
     WP, WUV, WTX = tri_records(world_surfs(root, wid), root, lambda V: s * V @ R.T + t, tree, Vs, log)
-    print(wid, '; '.join(log))
+    if verbose: print(wid, '; '.join(log))
     outP, outUV, outTX = [], [], []
     def near(pts): return tree.query(pts)[0] < thr
     def walk(p, uv, tx, d):
@@ -85,9 +85,12 @@ def combine(root, wid, thr=0.30, depth=4):
     TX = list(VTX) + outTX
     src = np.array([0] * len(VP) + [1] * added)
     return P, UV, TX, src
-if __name__ == '__main__':
-    root = sys.argv[1]
+def run(root, cdir, verbose=True):
+    """Combines every weapon (needs <cdir>/reg<id>.npz from register.run) and writes <cdir>/c<id>.npz."""
     for wid in WORLD:
-        P, UV, TX, src = combine(root, wid)
-        np.savez('/home/claude/dfmod/comb/c%d.npz' % wid, P=P, UV=UV, TX=np.array([x or '' for x in TX]), src=src)
-        print(wid, 'first-person tris', int((src == 0).sum()), 'world tris added', int((src == 1).sum()))
+        P, UV, TX, src = combine(root, wid, cdir, verbose=verbose)
+        np.savez(os.path.join(cdir, 'c%d.npz' % wid), P=P, UV=UV, TX=np.array([x or '' for x in TX]), src=src)
+        if verbose: print(wid, 'first-person tris', int((src == 0).sum()), 'world tris added', int((src == 1).sum()))
+if __name__ == '__main__':
+    # python3 combine.py <mod models/weapons2 folder> <comb dir>
+    run(sys.argv[1], sys.argv[2])

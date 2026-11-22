@@ -17,8 +17,10 @@ Version in this branch: **0.41** (`versionCode 87`). Base: upstream commit
   the game's menus, PDA and map on panels in the world.
 - Aim override in `TFE_DarkForces/weaponFireFunc.cpp`: every weapon fires from the pose of
   the right controller; weapon inaccuracy as in the original game.
-- Weapons held in the hand as 3D models, in several styles (voxel, high resolution,
-  models built with Blender scripts in `quest/tools/weapons`), with a hand drawn on the grip.
+- Weapons held in the hand as 3D models, in five styles: high resolution, voxel, fine voxel,
+  models built with Blender scripts in `quest/tools/weapons` (the default; packed as
+  `dfmod_weapons.bin`, made for this port) and DFMOD (see the installer below), with a hand drawn
+  on the grip.
 - Left wrist watch with the HUD, holographic map, mission PDA held in the left hand,
   pause menu on the PDA, start menu inside a ship room.
 - Weapon wheel and previous/next weapon strip on the right stick; three walking speeds;
@@ -41,6 +43,7 @@ The development log, version by version, is in
 | `TheForceEngine/Voxels/` | Dark Forces Voxel Pack models used by the "voxel objects" option |
 | `quest/android/` | CMake project, manifest, APK script, OpenXR layer and VR code (`src/`) |
 | `quest/tools/` | Scripts that generate the port's data: weapons, hands, gas mask, grips, translation |
+| `quest/installer/` | Installer of the DFMOD weapon style, from the player's own copy of the mod |
 | `quest/hosttest/` | Small desktop harnesses used to check geometry and menus without a headset |
 
 ## Building
@@ -88,9 +91,9 @@ folder and extracts the engine files. Then copy the files of your Dark Forces ga
   menu and agent-menu `.LFD` files, the Portuguese `GLOWING.FNT`, the transcriptions and
   glyph tables the translation tools learn from `DFBRIEF.LFD`. `quest/tools/translate`
   rebuilds them from your own copy of the game.
-- Weapon models converted from the Dark Forces Mod Remastered (Jedi Academy). The
-  converter is in `quest/tools/dfmod`; its output goes into the APK only on the builder's
-  machine (`DFMOD_BIN`, `DFMOD2_BIN`).
+- The weapon models of the Dark Forces Mod Remastered (Jedi Academy), used by the DFMOD weapon
+  style. [`quest/installer`](installer/README.md) builds that file on your computer from your own
+  download of the mod and copies it to the headset (`DFMOD2_BIN` in `build_apk.sh` is for private builds).
 - Signing keys and the Android toolchain.
 
 ## License and credits

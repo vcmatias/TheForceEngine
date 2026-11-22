@@ -1,6 +1,8 @@
 # Packs the combined DFmod weapons (combine.py: first-person model + the mod's third-person model filling
 # what it never had) into dfmod_combined.bin (DFMW v2) for the weapon style 4 (DFMOD).
-#   python3 pack_comb.py <mod models/weapons2 folder> <comb dir> <blender weapons dir> <out.bin> [texsize]
+#   python3 pack_comb.py <mod models/weapons2 folder> <comb dir> <own parts dir> <out.bin> [texsize]
+# <own parts dir>: thermal.npz/.png and mine.npz/.png (tools/weapons) and w5_add.npz/.png (blender_finish.py);
+# a ready copy is in quest/installer/own_parts.
 # Grip: the weapon frame origin sits 2.4 cm above and 1.8 cm ahead of the handle center (kit.py GRIP_C),
 # so the standard hand pose closes on the mod's own handle. Fusion cutter: the handle modeled in 0.19
 # (blender_finish.py, w5_add). Thermal detonator and mine: the Blender models.
@@ -62,8 +64,8 @@ def main(root, cdir, bdir, out, ts=1024):
             vs = subs.setdefault(ti, [])
             for k in range(3): vs.append(list(W[i, k]) + list(n[i]) + list(UV[i, k]) + [1.0, 1.0, 1.0])
         if wid == 5:
-            A = np.load('/home/claude/dfmod/work/w5_add.npz')['V']
-            ti = tex_id('/home/claude/dfmod/work/w5_add.png', alpha=70)
+            A = np.load(os.path.join(bdir, 'w5_add.npz'))['V']
+            ti = tex_id(os.path.join(bdir, 'w5_add.png'), alpha=70)
             subs[ti] = [list(v) + [1.0, 1.0, 1.0] for v in A]
         mz = to_w(np.array(MUZZLE.get(wid, sp['muzzle']), float), g, s)
         recs.append((wid, mz, {k: np.asarray(v, np.float32) for k, v in subs.items()}))
