@@ -1,9 +1,0 @@
-bar 4: MISSÃO IX
-bar 16: NAR SHADDAA, A CIDADE VERTICAL
-bar 28: A MARCA DA MORTE
-bar 48: CONTEXTO
-bar 225: MISSÃO
-bar 354: OBJETIVOS DA MISSÃO:
-p0: Você deve estar atrapalhando bastante os planos de Mohc, Kyle. Soube que ele colocou uma bela recompensa pela sua cabeça. Todo caçador de recompensas do sistema vai estar atrás de você. Como se não bastasse, rastreei algumas naves de contrabandistas que fizeram rotas de ida e volta entre Gromas e Anteevy, e todas levam a Nar Shaddaa, o covil dos contrabandistas: o lugar ideal para estar quando há um preço pela sua cabeça.
-p1: Os contrabandistas devem estar recebendo as rotas do Império de alguma forma, e esse é justamente o centro desse tipo de atividade. Você vai procurar dispositivos ou cartas de navegação imperiais. Vou pousar no coração de Nar Shaddaa, então tente não agitar os caçadores de recompensas locais.
-p2: - Encontrar provas de navegação imperial.

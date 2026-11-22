@@ -1,9 +1,0 @@
-bar 7: MISSÃO X
-bar 19: A NAVE DE JABBA, O HUTT
-bar 31: A VINGANÇA DE JABBA
-bar 55: MISSÃO
-bar 100: OBJETIVOS DA MISSÃO:
-p0: SEM INSTRUÇÕES PARA ESTA MISSÃO
-p1: - Recuperar o seu equipamento.
-p2: - Localizar o cartão nava.
-p3: - Resgatar Jan.

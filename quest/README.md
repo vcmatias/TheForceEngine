@@ -28,8 +28,6 @@ Version in this branch: **0.41** (`versionCode 87`). Base: upstream commit
 - Controls screen with a drawing of the Touch controllers; every button can be remapped
   there (saved in `tfe_vr.ini`). Grips work as modifiers.
 - Optional gas mask overlay; optional voxel objects (see credits).
-- Portuguese translation of the game messages, subtitles and VR menus
-  (`TheForceEngine/Translation/pt`, `TheForceEngine/Captions/subtitles-pt.txt`).
 
 The development log, version by version, is in
 [`NOTAS-DE-DESENVOLVIMENTO.md`](NOTAS-DE-DESENVOLVIMENTO.md) (Portuguese). Most versions after
@@ -42,7 +40,7 @@ The development log, version by version, is in
 | `TheForceEngine/` | The engine, with the port's changes applied (55 files changed, `GameUI/vrMenu.*` added) |
 | `TheForceEngine/Voxels/` | Dark Forces Voxel Pack models used by the "voxel objects" option |
 | `quest/android/` | CMake project, manifest, APK script, OpenXR layer and VR code (`src/`) |
-| `quest/tools/` | Scripts that generate the port's data: weapons, hands, gas mask, grips, translation |
+| `quest/tools/` | Scripts that generate the port's data: weapons, hands, gas mask, grips |
 | `quest/installer/` | Installer of the DFMOD weapon style, from the player's own copy of the mod |
 | `quest/hosttest/` | Small desktop harnesses used to check geometry and menus without a headset |
 
@@ -87,10 +85,11 @@ folder and extracts the engine files. Then copy the files of your Dark Forces ga
 
 ## What was left out of this repository
 
-- Any file of the game, and files built from the game's own art: the translated briefing,
-  menu and agent-menu `.LFD` files, the Portuguese `GLOWING.FNT`, the transcriptions and
-  glyph tables the translation tools learn from `DFBRIEF.LFD`. `quest/tools/translate`
-  rebuilds them from your own copy of the game.
+- Any file of the game.
+- The Portuguese translation of the game (texts, subtitles, briefing and menu images) and its
+  tools. The engine still looks for `Translation/pt` and `Captions/subtitles-pt.txt` in the data
+  folder; without them the game runs in English. The port's own VR option screens are written
+  in Portuguese in the code.
 - The weapon models of the Dark Forces Mod Remastered (Jedi Academy), used by the DFMOD weapon
   style. [`quest/installer`](installer/README.md) builds that file on your computer from your own
   download of the mod and copies it to the headset (`DFMOD2_BIN` in `build_apk.sh` is for private builds).
